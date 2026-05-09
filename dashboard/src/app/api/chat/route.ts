@@ -23,6 +23,7 @@ export async function POST(req: Request) {
   );
 
   const data = await res.json();
-  const content = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "Sin respuesta.";
+  console.log("Gemini response:", JSON.stringify(data));
+  const content = data.candidates?.[0]?.content?.parts?.[0]?.text ?? JSON.stringify(data);
   return Response.json({ content });
 }
