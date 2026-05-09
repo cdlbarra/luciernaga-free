@@ -1,0 +1,94 @@
+"use client";
+import { useState, useEffect } from "react";
+
+export default function Home() {
+  const [ingestors, setIngestors] = useState<any[]>([]);
+  const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/publish").then(r => r.json()).then(setIngestors).catch(() => {});
+  }, []);
+
+  async function handleAddIngestor() {
+    setLoading(true);
+    setStatus(null);
+    try {
+      const contrato = { name: `ingestor-${Date.now()}`, source_type: "json", config: {} };
+      const res = await fetch("/api/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(contrato),
+      });
+      const data = await res.json();
+      setIngestors(prev => [data, ...prev]);
+      setStatus("✓ Ingestor registrado");
+    } catch {
+      setStatus("✗ Error al registrar");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleChat(e: React.FormEvent) {
+    e.preventDefault();
+    if (!input.trim()) return;
+    const newMessages = [...messages, { role: "user", content: input }];
+    setMessages(newMessages);
+    setInput("");
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: newMessages }),
+      });
+      const data = await res.json();
+      setMessages([...newMessages, { role: "assistant", content: data.content }]);
+    } catch {
+      setMessages([...newMessages, { role: "assistant", content: "Error al conectar." }]);
+    }
+  }
+
+  return (
+    <main style={{ maxWidth: 800, margin: "0 auto" }}>
+      <h1 style={{ color: "#facc15" }}>🪲 Luciérnaga Dashboard</h1>
+      <section style={{ marginBottom: "2rem" }}>
+        <h2>Ingestores</h2>
+        <button onClick={handleAddIngestor} disabled={loading}
+          style={{ background: "#facc15", color: "#000", border: "none", padding: "0.5rem 1rem", borderRadius: 6, cursor: "pointer", fontWeight: "bold" }}>
+          {loading ? "Registrando…" : "+ Ingestor"}
+        </button>
+        {status && <p style={{ color: status.startsWith("✓") ? "#4ade80" : "#f87171" }}>{status}</p>}
+        <ul style={{ marginTop: "1rem" }}>
+          {ingestors.map((ing: any) => (
+            <li key={ing.id} style={{ padding: "0.5rem", background: "#1a1a1a", marginBottom: 8, borderRadius: 6 }}>
+              <strong>{ing.name}</strong> — {ing.source_type} — {ing.status}
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section>
+        <h2>Asistente IA</h2>
+        <div style={{ background: "#1a1a1a", padding: "1rem", borderRadius: 8, minHeight: 150, marginBottom: "1rem" }}>
+          {messages.map((m, i) => (
+            <div key={i} style={{ marginBottom: 8 }}>
+              <strong style={{ color: m.role === "user" ? "#facc15" : "#4ade80" }}>
+                {m.role === "user" ? "Tú" : "IA"}:
+              </strong>{" "}{m.content}
+            </div>
+          ))}
+          {messages.length === 0 && <p style={{ color: "#666" }}>Pregunta algo sobre el pipeline…</p>}
+        </div>
+        <form onSubmit={handleChat} style={{ display: "flex", gap: 8 }}>
+          <input value={input} onChange={e => setInput(e.target.value)} placeholder="Pregunta al asistente…"
+            style={{ flex: 1, padding: "0.5rem", borderRadius: 6, border: "1px solid #333", background: "#1a1a1a", color: "#f0f0f0" }} />
+          <button type="submit" style={{ background: "#4ade80", color: "#000", border: "none", padding: "0.5rem 1rem", borderRadius: 6, cursor: "pointer" }}>
+            Enviar
+          </button>
+        </form>
+      </section>
+    </main>
+  );
+}
