@@ -10,6 +10,7 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const [showPipeline, setShowPipeline] = useState(false);
 
   useEffect(() => {
     fetch("/api/publish").then(r => r.json()).then(setIngestors).catch(() => {});
@@ -38,6 +39,7 @@ export default function Home() {
   async function handleChat(e: React.FormEvent) {
     e.preventDefault();
     if (!input.trim()) return;
+    if (/diagrama|pipeline|flujo|arquitectura/i.test(input)) setShowPipeline(true);
     const newMessages = [...messages, { role: "user", content: input }];
     setMessages(newMessages);
     setInput("");
@@ -72,10 +74,6 @@ export default function Home() {
           ))}
         </ul>
       </section>
-      <section style={{ marginBottom: "2rem" }}>
-        <h2>Pipeline</h2>
-        <PipelineFlow />
-      </section>
       <section>
         <h2>Asistente IA</h2>
         <div style={{ background: "#1a1a1a", padding: "1rem", borderRadius: 8, minHeight: 150, marginBottom: "1rem" }}>
@@ -105,6 +103,11 @@ export default function Home() {
           ))}
           {messages.length === 0 && <p style={{ color: "#666" }}>Pregunta algo sobre el pipeline…</p>}
         </div>
+        {showPipeline && (
+          <div style={{ marginBottom: "1rem" }}>
+            <PipelineFlow />
+          </div>
+        )}
         <form onSubmit={handleChat} style={{ display: "flex", gap: 8 }}>
           <input value={input} onChange={e => setInput(e.target.value)} placeholder="Pregunta al asistente…"
             style={{ flex: 1, padding: "0.5rem", borderRadius: 6, border: "1px solid #333", background: "#1a1a1a", color: "#f0f0f0" }} />
