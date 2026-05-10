@@ -1,12 +1,12 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, type CSSProperties, type FormEvent } from "react";
 
 type Props = {
   onClose: () => void;
   onSuccess: (data: Record<string, unknown>) => void;
 };
 
-const inputStyle: React.CSSProperties = {
+const inputStyle: CSSProperties = {
   width: "100%",
   padding: "0.5rem",
   borderRadius: 6,
@@ -26,7 +26,7 @@ export function IngestorModal({ onClose, onSuccess }: Props) {
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!name.trim()) { setError("El nombre es requerido"); return; }
     if (!file) { setError("Debes seleccionar un archivo"); return; }
