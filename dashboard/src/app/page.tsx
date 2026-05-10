@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 
 export default function Home() {
   const [ingestors, setIngestors] = useState<any[]>([]);
@@ -76,7 +77,14 @@ export default function Home() {
             <div key={i} style={{ marginBottom: 8 }}>
               <strong style={{ color: m.role === "user" ? "#facc15" : "#4ade80" }}>
                 {m.role === "user" ? "Tú" : "IA"}:
-              </strong>{" "}{m.content}
+              </strong>
+              {m.role === "user" ? (
+                <span style={{ marginLeft: 4 }}>{m.content}</span>
+              ) : (
+                <div style={{ marginLeft: 4, lineHeight: 1.6 }}>
+                  <ReactMarkdown>{m.content}</ReactMarkdown>
+                </div>
+              )}
             </div>
           ))}
           {messages.length === 0 && <p style={{ color: "#666" }}>Pregunta algo sobre el pipeline…</p>}
