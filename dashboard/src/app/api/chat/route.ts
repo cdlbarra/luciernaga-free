@@ -1,29 +1,26 @@
 export async function POST(req: Request) {
   const { messages } = await req.json();
 
-  const history = messages.map((m: { role: string; content: string }) => ({
-    role: m.role === "assistant" ? "model" : "user",
-    parts: [{ text: m.content }],
-  }));
+  const systemMessage = {
+    role: "system",
+    content: "Eres el asistente de Luciérnaga MVP, un pipeline de ingestión de datos con 10 módulos: profiler, cleaner, validator, normalizer, metadata, reporter, notifier, reader, loader y main. Responde en español, de forma concisa y técnica."
+  };
 
-  const last = history.pop();
+  const allMessages = [systemMessage, ...messages];
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        system_instruction: {
-          parts: [{ text: "Eres el asistente de Luciérnaga MVP, un pipeline de ingestión de datos con 10 módulos: profiler, cleaner, validator, normalizer, metadata, reporter, notifier, reader, loader y main. Responde en español, de forma concisa y técnica." }]
-        },
-        contents: [...history, last],
-      }),
-    }
-  );
+  const res = await fetch("https://router.huggingface.co/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${process.env.HF_TOKEN}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: "meta-llama/Llama-3.2-3B-Instruct",
+      messages: allMessages
+    })
+  });
 
   const data = await res.json();
-  console.log("Gemini response:", JSON.stringify(data));
-  const content = data.candidates?.[0]?.content?.parts?.[0]?.text ?? JSON.stringify(data);
+  const content = data.choices?.[0]?.message?.content ?? "Error";
   return Response.json({ content });
 }
