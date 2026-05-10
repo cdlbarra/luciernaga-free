@@ -7,5 +7,5 @@ export async function POST(req: Request) {
   );
 
   const data = await res.json();
-  return Response.json(data);
+  return Response.json({ content: JSON.stringify(data) });
 }
