@@ -21,6 +21,7 @@ export async function POST(req: Request) {
   });
 
   const data = await res.json();
-  const content = data.choices?.[0]?.message?.content ?? JSON.stringify(data);
+  const raw = data.choices?.[0]?.message?.content ?? JSON.stringify(data);
+  const content = raw.replace(/(\d+)\.\s+/g, "\n\n$1. ");
   return Response.json({ content });
 }
