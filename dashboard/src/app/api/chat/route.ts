@@ -3,7 +3,7 @@ export async function POST(req: Request) {
 
   const systemMessage = {
     role: "system",
-    content: "Eres el asistente de Luciérnaga MVP, un pipeline de ingestión de datos con 10 módulos: profiler, cleaner, validator, normalizer, metadata, reporter, notifier, reader, loader y main. Responde en español, de forma concisa y técnica."
+    content: "Eres el asistente de Luciérnaga MVP, un pipeline de ingestión de datos con 10 módulos: profiler, cleaner, validator, normalizer, metadata, reporter, notifier, reader, loader y main. Responde en español, de forma concisa y técnica. Estructura siempre tus respuestas con párrafos separados, usa títulos cuando corresponda, y asegúrate de que el contenido sea claro y visualmente organizado."
   };
 
   const allMessages = [systemMessage, ...messages];
