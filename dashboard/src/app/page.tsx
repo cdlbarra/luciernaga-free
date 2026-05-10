@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
+import { MermaidChart } from "@/components/MermaidChart";
 
 export default function Home() {
   const [ingestors, setIngestors] = useState<any[]>([]);
@@ -82,7 +83,17 @@ export default function Home() {
                 <span style={{ marginLeft: 4 }}>{m.content}</span>
               ) : (
                 <div style={{ marginLeft: 4, lineHeight: 1.6 }}>
-                  <ReactMarkdown>{m.content}</ReactMarkdown>
+                  <ReactMarkdown
+                    components={{
+                      code({ className, children }) {
+                        const lang = /language-(\w+)/.exec(className || "")?.[1];
+                        if (lang === "mermaid") {
+                          return <MermaidChart chart={String(children).trim()} />;
+                        }
+                        return <code className={className}>{children}</code>;
+                      }
+                    }}
+                  >{m.content}</ReactMarkdown>
                 </div>
               )}
             </div>
