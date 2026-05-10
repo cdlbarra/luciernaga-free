@@ -21,6 +21,6 @@ export async function POST(req: Request) {
   });
 
   const data = await res.json();
-  const content = data.choices?.[0]?.message?.content ?? "Error";
+  const content = data.choices?.[0]?.message?.content ?? JSON.stringify(data);
   return Response.json({ content });
 }
