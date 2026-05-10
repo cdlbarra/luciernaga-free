@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { MermaidChart } from "@/components/MermaidChart";
+import { PipelineFlow } from "@/components/PipelineFlow";
 
 export default function Home() {
   const [ingestors, setIngestors] = useState<any[]>([]);
@@ -70,6 +71,10 @@ export default function Home() {
             </li>
           ))}
         </ul>
+      </section>
+      <section style={{ marginBottom: "2rem" }}>
+        <h2>Pipeline</h2>
+        <PipelineFlow />
       </section>
       <section>
         <h2>Asistente IA</h2>
