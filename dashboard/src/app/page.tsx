@@ -4,12 +4,14 @@ import ReactMarkdown from "react-markdown";
 import { MermaidChart } from "@/components/MermaidChart";
 import { PipelineFlow } from "@/components/PipelineFlow";
 import { IngestorModal } from "@/components/IngestorModal";
+import { IngestorDetail } from "@/components/IngestorDetail";
 
 export default function Home() {
   const [ingestors, setIngestors] = useState<any[]>([]);
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
   const [input, setInput] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [showPipeline, setShowPipeline] = useState(false);
 
@@ -57,13 +59,22 @@ export default function Home() {
           />
         )}
         {status && <p style={{ color: status.startsWith("✓") ? "#4ade80" : "#f87171" }}>{status}</p>}
-        <ul style={{ marginTop: "1rem" }}>
+        <ul style={{ marginTop: "1rem", listStyle: "none", padding: 0, margin: "1rem 0 0" }}>
           {ingestors.map((ing: any) => (
-            <li key={ing.id} style={{ padding: "0.5rem", background: "#1a1a1a", marginBottom: 8, borderRadius: 6 }}>
+            <li
+              key={ing.id}
+              onClick={() => setSelectedId(ing.id)}
+              style={{ padding: "0.5rem 0.75rem", background: "#1a1a1a", marginBottom: 8, borderRadius: 6, cursor: "pointer", border: "1px solid transparent", transition: "border-color 0.15s" }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = "#facc15")}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = "transparent")}
+            >
               <strong>{ing.name}</strong> — {ing.source_type} — {ing.status}
             </li>
           ))}
         </ul>
+        {selectedId && (
+          <IngestorDetail id={selectedId} onClose={() => setSelectedId(null)} />
+        )}
       </section>
       <section>
         <h2>Asistente IA</h2>
