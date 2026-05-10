@@ -15,7 +15,7 @@ export async function POST(req: Request) {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: "meta-llama/Llama-3.2-3B-Instruct",
+      model: "mistralai/Mistral-7B-Instruct-v0.3",
       messages: allMessages
     })
   });
