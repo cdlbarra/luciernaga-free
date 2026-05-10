@@ -3,12 +3,13 @@ import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { MermaidChart } from "@/components/MermaidChart";
 import { PipelineFlow } from "@/components/PipelineFlow";
+import { IngestorModal } from "@/components/IngestorModal";
 
 export default function Home() {
   const [ingestors, setIngestors] = useState<any[]>([]);
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [showPipeline, setShowPipeline] = useState(false);
 
@@ -16,25 +17,6 @@ export default function Home() {
     fetch("/api/publish").then(r => r.json()).then(setIngestors).catch(() => {});
   }, []);
 
-  async function handleAddIngestor() {
-    setLoading(true);
-    setStatus(null);
-    try {
-      const contrato = { name: `ingestor-${Date.now()}`, source_type: "json", config: {} };
-      const res = await fetch("/api/publish", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(contrato),
-      });
-      const data = await res.json();
-      setIngestors(prev => [data, ...prev]);
-      setStatus("✓ Ingestor registrado");
-    } catch {
-      setStatus("✗ Error al registrar");
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function handleChat(e: React.FormEvent) {
     e.preventDefault();
@@ -61,10 +43,19 @@ export default function Home() {
       <h1 style={{ color: "#facc15" }}>🪲 Luciérnaga Dashboard</h1>
       <section style={{ marginBottom: "2rem" }}>
         <h2>Ingestores</h2>
-        <button onClick={handleAddIngestor} disabled={loading}
+        <button onClick={() => setShowModal(true)}
           style={{ background: "#facc15", color: "#000", border: "none", padding: "0.5rem 1rem", borderRadius: 6, cursor: "pointer", fontWeight: "bold" }}>
-          {loading ? "Registrando…" : "+ Ingestor"}
+          + Ingestor
         </button>
+        {showModal && (
+          <IngestorModal
+            onClose={() => setShowModal(false)}
+            onSuccess={(data) => {
+              setIngestors(prev => [data as any, ...prev]);
+              setStatus("✓ Ingestor registrado");
+            }}
+          />
+        )}
         {status && <p style={{ color: status.startsWith("✓") ? "#4ade80" : "#f87171" }}>{status}</p>}
         <ul style={{ marginTop: "1rem" }}>
           {ingestors.map((ing: any) => (
