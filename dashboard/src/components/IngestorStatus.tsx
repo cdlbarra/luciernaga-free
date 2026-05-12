@@ -13,9 +13,10 @@ interface Ingestor {
 }
 
 export function IngestorStatus() {
-  const { checkHealth, listarIngestores, cargando } = useIngestor();
+  const { checkHealth, listarIngestores, eliminarIngestor, cargando } = useIngestor();
   const [ingestores, setIngestores] = useState<Ingestor[]>([]);
   const [isHealthy, setIsHealthy] = useState(false);
+  const [eliminando, setEliminando] = useState<string | null>(null);
 
   const loadData = async () => {
     try {
@@ -30,6 +31,20 @@ export function IngestorStatus() {
       setIngestores(Array.isArray(list) ? list : []);
     } catch {
       setIngestores([]);
+    }
+  };
+
+  const handleEliminar = async (id: string) => {
+    if (window.confirm("¿Eliminar este ingestor?")) {
+      setEliminando(id);
+      try {
+        await eliminarIngestor(id);
+        await loadData();
+      } catch (err) {
+        console.error("Error al eliminar ingestor:", err);
+      } finally {
+        setEliminando(null);
+      }
     }
   };
 
@@ -112,6 +127,9 @@ export function IngestorStatus() {
                   <th style={{ padding: "0.75rem", textAlign: "left", borderBottom: "1px solid #333", color: "#aaa", fontWeight: 600, fontSize: "0.875rem" }}>
                     Estado
                   </th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", borderBottom: "1px solid #333", color: "#aaa", fontWeight: 600, fontSize: "0.875rem" }}>
+                    Acciones
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -145,6 +163,36 @@ export function IngestorStatus() {
                       >
                         {ing.estado || ing.status || "N/A"}
                       </span>
+                    </td>
+                    <td style={{ padding: "0.75rem" }}>
+                      <button
+                        onClick={() => handleEliminar(ing.id)}
+                        disabled={eliminando === ing.id}
+                        style={{
+                          background: "#dc2626",
+                          color: "#fff",
+                          border: "none",
+                          padding: "0.4rem 0.8rem",
+                          borderRadius: 4,
+                          cursor: eliminando === ing.id ? "not-allowed" : "pointer",
+                          fontSize: "0.875rem",
+                          fontWeight: 600,
+                          opacity: eliminando === ing.id ? 0.6 : 1,
+                          transition: "all 0.2s",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (eliminando !== ing.id) {
+                            e.currentTarget.style.background = "#b91c1c";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (eliminando !== ing.id) {
+                            e.currentTarget.style.background = "#dc2626";
+                          }
+                        }}
+                      >
+                        {eliminando === ing.id ? "Eliminando..." : "🗑️"}
+                      </button>
                     </td>
                   </tr>
                 ))}
