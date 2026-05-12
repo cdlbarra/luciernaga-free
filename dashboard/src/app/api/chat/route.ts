@@ -1,5 +1,27 @@
+async function guardarEnSupabase(rol: string, contenido: string) {
+  const INGESTOR_URL = process.env.NEXT_PUBLIC_INGESTOR_URL || "http://localhost:8000";
+  try {
+    await fetch(`${INGESTOR_URL}/chat/guardar-mensaje`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        usuario_id: "default",
+        rol,
+        contenido,
+      }),
+    });
+  } catch (err) {
+    console.error("Error guardando en Supabase:", err);
+  }
+}
+
 export async function POST(req: Request) {
   const { messages } = await req.json();
+
+  const userMessage = messages[messages.length - 1]?.content;
+  if (userMessage) {
+    await guardarEnSupabase("user", userMessage);
+  }
 
   const systemMessage = {
     role: "system",
@@ -23,5 +45,8 @@ export async function POST(req: Request) {
   const data = await res.json();
   const raw = data.choices?.[0]?.message?.content ?? JSON.stringify(data);
   const content = raw.replace(/(\d+)\.\s+/g, "\n\n$1. ");
+
+  await guardarEnSupabase("assistant", content);
+
   return Response.json({ content });
 }
