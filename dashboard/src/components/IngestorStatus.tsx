@@ -13,24 +13,21 @@ interface Ingestor {
 }
 
 export function IngestorStatus() {
-  const { checkHealth, listarIngestores, loading, error } = useIngestor();
-  const [healthStatus, setHealthStatus] = useState<any>(null);
+  const { checkHealth, listarIngestores, cargando } = useIngestor();
   const [ingestores, setIngestores] = useState<Ingestor[]>([]);
   const [isHealthy, setIsHealthy] = useState(false);
 
   const loadData = async () => {
     try {
-      const health = await checkHealth();
-      setHealthStatus(health);
+      await checkHealth();
       setIsHealthy(true);
     } catch {
-      setHealthStatus(null);
       setIsHealthy(false);
     }
 
     try {
       const list = await listarIngestores();
-      setIngestores(Array.isArray(list) ? list : list.data || []);
+      setIngestores(Array.isArray(list) ? list : []);
     } catch {
       setIngestores([]);
     }
@@ -40,14 +37,11 @@ export function IngestorStatus() {
     loadData();
   }, []);
 
-  const ingestorUrl = process.env.NEXT_PUBLIC_INGESTOR_URL || "http://localhost:8000";
-
   return (
     <section style={{ marginBottom: "2rem", marginTop: "2rem" }}>
       <h2 style={{ color: "#facc15", marginBottom: "1rem" }}>Estado de Conexión</h2>
 
-      {/* Status Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
         {/* Ingestor Status */}
         <div style={{
           background: "#1a1a1a",
@@ -60,29 +54,7 @@ export function IngestorStatus() {
             <h3 style={{ margin: 0, color: "#f0f0f0" }}>Ingestor</h3>
           </div>
           <p style={{ margin: "0.5rem 0", color: "#aaa", fontSize: "0.875rem" }}>
-            <strong>Estado:</strong> {isHealthy ? "Activo" : "Inactivo"}
-          </p>
-          <p style={{ margin: "0.5rem 0", color: "#aaa", fontSize: "0.875rem" }}>
-            <strong>URL:</strong> {ingestorUrl}
-          </p>
-        </div>
-
-        {/* Supabase Connection */}
-        <div style={{
-          background: "#1a1a1a",
-          border: "2px solid #3b82f6",
-          borderRadius: 8,
-          padding: "1rem",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-            <span style={{ fontSize: 20 }}>📊</span>
-            <h3 style={{ margin: 0, color: "#f0f0f0" }}>Supabase</h3>
-          </div>
-          <p style={{ margin: "0.5rem 0", color: "#aaa", fontSize: "0.875rem" }}>
-            <strong>Conexión:</strong> {healthStatus?.supabase_connected ? "Sí ✓" : "No ✗"}
-          </p>
-          <p style={{ margin: "0.5rem 0", color: "#aaa", fontSize: "0.875rem" }}>
-            <strong>BD:</strong> {healthStatus?.database || "N/A"}
+            {isHealthy ? "Activo" : "Inactivo"}
           </p>
         </div>
 
@@ -98,11 +70,11 @@ export function IngestorStatus() {
             <h3 style={{ margin: 0, color: "#f0f0f0" }}>Ingestores</h3>
           </div>
           <p style={{ margin: "0.5rem 0", color: "#aaa", fontSize: "0.875rem" }}>
-            <strong>Disponibles:</strong> {ingestores.length}
+            {ingestores.length} disponibles
           </p>
           <button
             onClick={loadData}
-            disabled={loading}
+            disabled={cargando}
             style={{
               marginTop: "0.5rem",
               background: "#facc15",
@@ -110,13 +82,13 @@ export function IngestorStatus() {
               border: "none",
               padding: "0.4rem 0.8rem",
               borderRadius: 4,
-              cursor: loading ? "not-allowed" : "pointer",
+              cursor: cargando ? "not-allowed" : "pointer",
               fontSize: "0.875rem",
               fontWeight: "bold",
-              opacity: loading ? 0.6 : 1,
+              opacity: cargando ? 0.6 : 1,
             }}
           >
-            {loading ? "Cargando..." : "Refrescar"}
+            {cargando ? "Cargando..." : "Refrescar"}
           </button>
         </div>
       </div>
@@ -179,20 +151,6 @@ export function IngestorStatus() {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
-
-      {error && (
-        <div style={{
-          marginTop: "1rem",
-          padding: "1rem",
-          background: "#7f1d1d",
-          border: "1px solid #f87171",
-          borderRadius: 8,
-          color: "#fca5a5",
-          fontSize: "0.875rem",
-        }}>
-          <strong>Error:</strong> {error}
         </div>
       )}
     </section>
