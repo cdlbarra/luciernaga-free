@@ -1,0 +1,200 @@
+"use client";
+import { useState, useEffect } from "react";
+import { useIngestor } from "@/hooks/useIngestor";
+
+interface Ingestor {
+  id: string;
+  nombre?: string;
+  name?: string;
+  tipo?: string;
+  source_type?: string;
+  estado?: string;
+  status?: string;
+}
+
+export function IngestorStatus() {
+  const { checkHealth, listarIngestores, loading, error } = useIngestor();
+  const [healthStatus, setHealthStatus] = useState<any>(null);
+  const [ingestores, setIngestores] = useState<Ingestor[]>([]);
+  const [isHealthy, setIsHealthy] = useState(false);
+
+  const loadData = async () => {
+    try {
+      const health = await checkHealth();
+      setHealthStatus(health);
+      setIsHealthy(true);
+    } catch {
+      setHealthStatus(null);
+      setIsHealthy(false);
+    }
+
+    try {
+      const list = await listarIngestores();
+      setIngestores(Array.isArray(list) ? list : list.data || []);
+    } catch {
+      setIngestores([]);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const ingestorUrl = process.env.NEXT_PUBLIC_INGESTOR_URL || "http://localhost:8000";
+
+  return (
+    <section style={{ marginBottom: "2rem", marginTop: "2rem" }}>
+      <h2 style={{ color: "#facc15", marginBottom: "1rem" }}>Estado de Conexión</h2>
+
+      {/* Status Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+        {/* Ingestor Status */}
+        <div style={{
+          background: "#1a1a1a",
+          border: `2px solid ${isHealthy ? "#4ade80" : "#f87171"}`,
+          borderRadius: 8,
+          padding: "1rem",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+            <span style={{ fontSize: 20 }}>{isHealthy ? "✅" : "❌"}</span>
+            <h3 style={{ margin: 0, color: "#f0f0f0" }}>Ingestor</h3>
+          </div>
+          <p style={{ margin: "0.5rem 0", color: "#aaa", fontSize: "0.875rem" }}>
+            <strong>Estado:</strong> {isHealthy ? "Activo" : "Inactivo"}
+          </p>
+          <p style={{ margin: "0.5rem 0", color: "#aaa", fontSize: "0.875rem" }}>
+            <strong>URL:</strong> {ingestorUrl}
+          </p>
+        </div>
+
+        {/* Supabase Connection */}
+        <div style={{
+          background: "#1a1a1a",
+          border: "2px solid #3b82f6",
+          borderRadius: 8,
+          padding: "1rem",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+            <span style={{ fontSize: 20 }}>📊</span>
+            <h3 style={{ margin: 0, color: "#f0f0f0" }}>Supabase</h3>
+          </div>
+          <p style={{ margin: "0.5rem 0", color: "#aaa", fontSize: "0.875rem" }}>
+            <strong>Conexión:</strong> {healthStatus?.supabase_connected ? "Sí ✓" : "No ✗"}
+          </p>
+          <p style={{ margin: "0.5rem 0", color: "#aaa", fontSize: "0.875rem" }}>
+            <strong>BD:</strong> {healthStatus?.database || "N/A"}
+          </p>
+        </div>
+
+        {/* Ingestors Count */}
+        <div style={{
+          background: "#1a1a1a",
+          border: "2px solid #facc15",
+          borderRadius: 8,
+          padding: "1rem",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+            <span style={{ fontSize: 20 }}>📦</span>
+            <h3 style={{ margin: 0, color: "#f0f0f0" }}>Ingestores</h3>
+          </div>
+          <p style={{ margin: "0.5rem 0", color: "#aaa", fontSize: "0.875rem" }}>
+            <strong>Disponibles:</strong> {ingestores.length}
+          </p>
+          <button
+            onClick={loadData}
+            disabled={loading}
+            style={{
+              marginTop: "0.5rem",
+              background: "#facc15",
+              color: "#000",
+              border: "none",
+              padding: "0.4rem 0.8rem",
+              borderRadius: 4,
+              cursor: loading ? "not-allowed" : "pointer",
+              fontSize: "0.875rem",
+              fontWeight: "bold",
+              opacity: loading ? 0.6 : 1,
+            }}
+          >
+            {loading ? "Cargando..." : "Refrescar"}
+          </button>
+        </div>
+      </div>
+
+      {/* Ingestors List */}
+      {ingestores.length > 0 && (
+        <div style={{ background: "#1a1a1a", borderRadius: 8, overflow: "hidden", border: "1px solid #333" }}>
+          <div style={{ padding: "1rem", borderBottom: "1px solid #333", background: "#0a0a0a" }}>
+            <h3 style={{ margin: 0, color: "#f0f0f0" }}>Lista de Ingestores</h3>
+          </div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ background: "#111111" }}>
+                  <th style={{ padding: "0.75rem", textAlign: "left", borderBottom: "1px solid #333", color: "#aaa", fontWeight: 600, fontSize: "0.875rem" }}>
+                    Nombre
+                  </th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", borderBottom: "1px solid #333", color: "#aaa", fontWeight: 600, fontSize: "0.875rem" }}>
+                    Tipo
+                  </th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", borderBottom: "1px solid #333", color: "#aaa", fontWeight: 600, fontSize: "0.875rem" }}>
+                    Estado
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {ingestores.map((ing) => (
+                  <tr
+                    key={ing.id}
+                    style={{
+                      borderBottom: "1px solid #222",
+                      transition: "background-color 0.15s",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#151515")}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                  >
+                    <td style={{ padding: "0.75rem", color: "#f0f0f0" }}>
+                      <strong>{ing.nombre || ing.name || "N/A"}</strong>
+                    </td>
+                    <td style={{ padding: "0.75rem", color: "#aaa", fontSize: "0.875rem" }}>
+                      {ing.tipo || ing.source_type || "N/A"}
+                    </td>
+                    <td style={{ padding: "0.75rem", color: "#aaa", fontSize: "0.875rem" }}>
+                      <span
+                        style={{
+                          display: "inline-block",
+                          padding: "0.25rem 0.5rem",
+                          borderRadius: 4,
+                          background: ing.estado === "activo" || ing.status === "active" ? "#10b981" : "#6b7280",
+                          color: "#fff",
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {ing.estado || ing.status || "N/A"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div style={{
+          marginTop: "1rem",
+          padding: "1rem",
+          background: "#7f1d1d",
+          border: "1px solid #f87171",
+          borderRadius: 8,
+          color: "#fca5a5",
+          fontSize: "0.875rem",
+        }}>
+          <strong>Error:</strong> {error}
+        </div>
+      )}
+    </section>
+  );
+}

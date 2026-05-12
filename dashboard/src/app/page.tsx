@@ -5,6 +5,7 @@ import { MermaidChart } from "@/components/MermaidChart";
 import { PipelineFlow } from "@/components/PipelineFlow";
 import { IngestorModal } from "@/components/IngestorModal";
 import { IngestorDetail } from "@/components/IngestorDetail";
+import { IngestorStatus } from "@/components/IngestorStatus";
 
 export default function Home() {
   const [ingestors, setIngestors] = useState<any[]>([]);
@@ -43,6 +44,7 @@ export default function Home() {
   return (
     <main style={{ maxWidth: 800, margin: "0 auto" }}>
       <h1 style={{ color: "#facc15" }}>🪲 Luciérnaga Dashboard</h1>
+      <IngestorStatus />
       <section style={{ marginBottom: "2rem" }}>
         <h2>Ingestores</h2>
         <button onClick={() => setShowModal(true)}
