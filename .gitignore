@@ -1,0 +1,15 @@
+node_modules/
+dashboard/node_modules/
+.env
+.env.local
+.env.*.local
+*.log
+dist/
+build/
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+.claude/settings.local.json
