@@ -66,11 +66,22 @@ export default function Home() {
             <li
               key={ing.id}
               onClick={() => setSelectedId(ing.id)}
-              style={{ padding: "0.5rem 0.75rem", background: "#1a1a1a", marginBottom: 8, borderRadius: 6, cursor: "pointer", border: "1px solid transparent", transition: "border-color 0.15s" }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.5rem 0.75rem", background: "#1a1a1a", marginBottom: 8, borderRadius: 6, cursor: "pointer", border: "1px solid transparent", transition: "border-color 0.15s" }}
               onMouseEnter={e => (e.currentTarget.style.borderColor = "#facc15")}
               onMouseLeave={e => (e.currentTarget.style.borderColor = "transparent")}
             >
-              <strong>{ing.name}</strong> — {ing.source_type} — {ing.status}
+              <span><strong>{ing.name}</strong> — {ing.source_type} — {ing.status}</span>
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  if (!confirm(`¿Eliminar el ingestor "${ing.name}"?`)) return;
+                  const res = await fetch(`/api/publish?id=${ing.id}`, { method: "DELETE" });
+                  if (res.ok) setIngestors(prev => prev.filter(i => i.id !== ing.id));
+                }}
+                style={{ background: "#ef4444", color: "#fff", border: "none", padding: "0.3rem 0.75rem", borderRadius: 5, cursor: "pointer", fontSize: 13, fontWeight: "bold", flexShrink: 0 }}
+              >
+                Eliminar
+              </button>
             </li>
           ))}
         </ul>
