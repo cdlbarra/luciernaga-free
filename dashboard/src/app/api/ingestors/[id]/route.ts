@@ -5,8 +5,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY!
 );
 
-function extractSourceMeta(source: unknown): { columns: string[]; recordCount: number } {
-  if (!source || typeof source !== "object") return { columns: [], recordCount: 0 };
+function extractSourceMeta(source: unknown): { columns: string[]; recordCount: number; previewRows: Record<string, unknown>[] } {
+  if (!source || typeof source !== "object") return { columns: [], recordCount: 0, previewRows: [] };
 
   const src = source as Record<string, unknown>;
 
@@ -14,6 +14,7 @@ function extractSourceMeta(source: unknown): { columns: string[]; recordCount: n
     return {
       columns: Object.keys(src.rows[0] as object),
       recordCount: src.rows.length,
+      previewRows: (src.rows as Record<string, unknown>[]).slice(0, 5),
     };
   }
 
@@ -21,11 +22,12 @@ function extractSourceMeta(source: unknown): { columns: string[]; recordCount: n
     return {
       columns: Object.keys((source as unknown[])[0] as object),
       recordCount: (source as unknown[]).length,
+      previewRows: (source as Record<string, unknown>[]).slice(0, 5),
     };
   }
 
   const keys = Object.keys(src).filter(k => !["errors", "quality", "source"].includes(k));
-  return { columns: keys, recordCount: keys.length > 0 ? 1 : 0 };
+  return { columns: keys, recordCount: keys.length > 0 ? 1 : 0, previewRows: [] };
 }
 
 export async function GET(_req: Request, context: { params: Promise<{ id: string }> }) {
@@ -47,7 +49,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
 
   const run = runs?.[0] ?? null;
   const report = (run?.report ?? {}) as Record<string, unknown>;
-  const { columns, recordCount } = extractSourceMeta(report.source);
+  const { columns, recordCount, previewRows } = extractSourceMeta(report.source);
   const errors: unknown[] = Array.isArray(report.errors) ? report.errors : [];
 
   return Response.json({
@@ -59,6 +61,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
     quality_score: run?.quality_score ?? null,
     columns,
     record_count: recordCount,
+    preview_rows: previewRows,
     errors,
     last_run: run?.created_at ?? null,
   });

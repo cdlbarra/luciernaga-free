@@ -10,6 +10,7 @@ type IngestorData = {
   quality_score: number | null;
   columns: string[];
   record_count: number;
+  preview_rows: Record<string, unknown>[];
   errors: unknown[];
   last_run: string | null;
 };
@@ -112,6 +113,38 @@ export function IngestorDetail({ id, onClose }: Props) {
                 <p style={{ color: "#555", fontSize: 13, margin: 0 }}>Sin columnas detectadas aún</p>
               )}
             </section>
+
+            {data.preview_rows.length > 0 && (
+              <section style={{ marginBottom: "1.5rem" }}>
+                <p style={{ color: "#aaa", fontSize: 13, margin: "0 0 0.5rem" }}>
+                  Vista previa de datos (primeras {data.preview_rows.length} filas)
+                </p>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: "monospace" }}>
+                    <thead>
+                      <tr>
+                        {data.columns.map(col => (
+                          <th key={col} style={{ textAlign: "left", padding: "4px 8px", borderBottom: "1px solid #3a3a3a", color: "#facc15", whiteSpace: "nowrap" }}>
+                            {col}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.preview_rows.map((row, i) => (
+                        <tr key={i} style={{ background: i % 2 === 0 ? "#1a1a1a" : "#222" }}>
+                          {data.columns.map(col => (
+                            <td key={col} style={{ padding: "4px 8px", borderBottom: "1px solid #2a2a2a", color: "#d0d0d0", whiteSpace: "nowrap" }}>
+                              {String(row[col] ?? "—")}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
 
             <section>
               <p style={{ color: "#aaa", fontSize: 13, margin: "0 0 0.5rem" }}>
