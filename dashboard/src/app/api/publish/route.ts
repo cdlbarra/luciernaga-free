@@ -62,6 +62,23 @@ export async function POST(req: Request) {
 
   if (error) return Response.json({ error }, { status: 500 });
 
+  if (fileData) {
+    const rawDataInsert = await supabase
+      .from("raw_data")
+      .insert({
+        ingestor_id: data.id,
+        data: fileData,
+        uploaded_by: req.headers.get("x-user-id") ?? "anonymous",
+        company: req.headers.get("x-company") ?? "default",
+        data_type: "raw",
+        uploaded_at: new Date().toISOString(),
+      });
+
+    if (rawDataInsert.error) {
+      console.error("Error saving raw_data:", rawDataInsert.error);
+    }
+  }
+
   if (fileData && process.env.INGESTOR_URL) {
     try {
       await fetch(`${process.env.INGESTOR_URL}/ingest`, {
