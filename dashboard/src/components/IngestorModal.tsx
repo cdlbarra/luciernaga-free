@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect, type CSSProperties, type FormEvent } from "react";
 import * as XLSX from "xlsx";
 import { generarReportValidacion, type ValidationReport } from "@/lib/dataValidator";
+import { ValidationTable } from "@/components/ValidationTable";
 
 type Props = {
   onClose: () => void;
@@ -120,36 +121,17 @@ export function IngestorModal({ onClose, onSuccess }: Props) {
               onChange={e => setFile(e.target.files?.[0] ?? null)}
             />
           </label>
-          {validating && <p style={{ color: "#aaa", fontSize: 13, margin: "0 0 0.75rem" }}>Validando archivo…</p>}
+          {validating && (
+            <p style={{ color: "#aaa", fontSize: 13, margin: "0 0 0.75rem", fontStyle: "italic" }}>Validando archivo…</p>
+          )}
 
           {validationReport && (
-            <div style={{ background: "#111", border: "1px solid #2a2a2a", borderRadius: 6, padding: "0.75rem", marginBottom: "1rem", fontSize: 13 }}>
-              <p style={{ margin: "0 0 0.5rem", color: "#aaa" }}>
-                Resumen de validación — {validationReport.total_filas} filas · {validationReport.resumen.porcentaje_completitud}% completitud
-              </p>
-              {validationReport.errores.length > 0 && (
-                <div style={{ marginBottom: 4 }}>
-                  {validationReport.errores.map((e, i) => (
-                    <p key={i} style={{ margin: "2px 0", color: "#f87171" }}>✗ [{e.campo}] {e.mensaje}</p>
-                  ))}
-                </div>
-              )}
-              {validationReport.advertencias.length > 0 && (
-                <div style={{ marginBottom: 4 }}>
-                  {validationReport.advertencias.map((w, i) => (
-                    <p key={i} style={{ margin: "2px 0", color: "#facc15" }}>⚠ [{w.campo}] {w.mensaje}</p>
-                  ))}
-                </div>
-              )}
-              {validationReport.sugerencias.length > 0 && (
-                <div>
-                  {validationReport.sugerencias.map((s, i) => (
-                    <p key={i} style={{ margin: "2px 0", color: "#4ade80" }}>ℹ [{s.campo}] {s.mensaje}</p>
-                  ))}
-                </div>
-              )}
-              {!validationReport.resumen.tiene_errores && !validationReport.resumen.tiene_advertencias && (
-                <p style={{ margin: 0, color: "#4ade80" }}>✓ Sin problemas detectados</p>
+            <div style={{ marginBottom: "1rem" }}>
+              <ValidationTable report={validationReport} compact />
+              {validationReport.resumen.tiene_advertencias && !validationReport.resumen.tiene_errores && (
+                <p style={{ margin: "6px 0 0", fontSize: 12, color: "#facc15", background: "rgba(250,204,21,0.08)", border: "1px solid rgba(250,204,21,0.2)", borderRadius: 4, padding: "4px 10px" }}>
+                  ⚠ Hay advertencias — puedes continuar pero revisa los datos antes de confirmar.
+                </p>
               )}
             </div>
           )}
@@ -168,8 +150,8 @@ export function IngestorModal({ onClose, onSuccess }: Props) {
             <button
               type="submit"
               disabled={loading || validating || (validationReport?.resumen.tiene_errores ?? false)}
-              title={validationReport?.resumen.tiene_errores ? "Corrige los errores antes de continuar" : undefined}
-              style={{ padding: "0.5rem 1.2rem", borderRadius: 6, border: "none", background: "#facc15", color: "#000", fontWeight: "bold", cursor: (loading || validating || validationReport?.resumen.tiene_errores) ? "not-allowed" : "pointer", fontSize: 14, opacity: (loading || validating || validationReport?.resumen.tiene_errores) ? 0.5 : 1 }}
+              title={validationReport?.resumen.tiene_errores ? "Corrige los errores críticos antes de continuar" : undefined}
+              style={{ padding: "0.5rem 1.2rem", borderRadius: 6, border: "none", background: "#facc15", color: "#000", fontWeight: "bold", cursor: (loading || validating || validationReport?.resumen.tiene_errores) ? "not-allowed" : "pointer", fontSize: 14, opacity: (loading || validating || validationReport?.resumen.tiene_errores) ? 0.45 : 1 }}
             >
               {loading ? "Enviando…" : "Confirmar"}
             </button>
