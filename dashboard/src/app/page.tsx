@@ -28,10 +28,15 @@ export default function Home() {
   const [rawData, setRawData] = useState<RawDataRow[]>([]);
   const [rawFilter, setRawFilter] = useState({ uploaded_by: "", company: "" });
   const [selectedRawIds, setSelectedRawIds] = useState<Set<string>>(new Set());
+  const [rawOptions, setRawOptions] = useState<{ users: string[]; companies: string[] }>({ users: [], companies: [] });
 
   useEffect(() => {
     fetch("/api/publish").then(r => r.json()).then(setIngestors).catch(() => {});
     fetchRawData({});
+    fetch("/api/raw-data?getOptions=true")
+      .then(r => r.json())
+      .then(d => setRawOptions(d))
+      .catch(() => {});
   }, []);
 
   async function fetchRawData(filter: { uploaded_by?: string; company?: string }) {
@@ -152,18 +157,22 @@ export default function Home() {
       <section style={{ marginBottom: "2rem" }}>
         <h2>Raw Data</h2>
         <div style={{ display: "flex", gap: 8, marginBottom: "1rem", flexWrap: "wrap" }}>
-          <input
-            placeholder="Filtrar por usuario…"
+          <select
             value={rawFilter.uploaded_by}
             onChange={e => setRawFilter(f => ({ ...f, uploaded_by: e.target.value }))}
-            style={{ padding: "0.4rem 0.6rem", borderRadius: 6, border: "1px solid #333", background: "#0d0d0d", color: "#f0f0f0", fontSize: 13 }}
-          />
-          <input
-            placeholder="Filtrar por empresa…"
+            style={{ padding: "0.4rem 0.6rem", borderRadius: 6, border: "1px solid #333", background: "#0d0d0d", color: "#f0f0f0", fontSize: 13, cursor: "pointer" }}
+          >
+            <option value="">Todos los usuarios</option>
+            {rawOptions.users.map(u => <option key={u} value={u}>{u}</option>)}
+          </select>
+          <select
             value={rawFilter.company}
             onChange={e => setRawFilter(f => ({ ...f, company: e.target.value }))}
-            style={{ padding: "0.4rem 0.6rem", borderRadius: 6, border: "1px solid #333", background: "#0d0d0d", color: "#f0f0f0", fontSize: 13 }}
-          />
+            style={{ padding: "0.4rem 0.6rem", borderRadius: 6, border: "1px solid #333", background: "#0d0d0d", color: "#f0f0f0", fontSize: 13, cursor: "pointer" }}
+          >
+            <option value="">Todas las empresas</option>
+            {rawOptions.companies.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
           <button
             onClick={() => fetchRawData(rawFilter)}
             style={{ padding: "0.4rem 0.9rem", borderRadius: 6, border: "none", background: "#facc15", color: "#000", fontWeight: "bold", cursor: "pointer", fontSize: 13 }}

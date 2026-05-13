@@ -15,6 +15,15 @@ function extractRowCount(data: unknown): number {
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
+
+  if (searchParams.get("getOptions") === "true") {
+    const { data, error } = await supabase.from("raw_data").select("uploaded_by, company");
+    if (error) return Response.json({ error }, { status: 500 });
+    const users = [...new Set((data ?? []).map(r => r.uploaded_by))].sort();
+    const companies = [...new Set((data ?? []).map(r => r.company))].sort();
+    return Response.json({ users, companies });
+  }
+
   const uploadedBy = searchParams.get("uploaded_by");
   const company = searchParams.get("company");
 
