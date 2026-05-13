@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, type CSSProperties } from "react";
+import type { ValidationReport, ValidationIssue } from "@/lib/dataValidator";
 
 type IngestorData = {
   id: string;
@@ -13,6 +14,8 @@ type IngestorData = {
   preview_rows: Record<string, unknown>[];
   errors: unknown[];
   last_run: string | null;
+  validation_report: ValidationReport | null;
+  validation_status: string | null;
 };
 
 type Props = {
@@ -143,6 +146,40 @@ export function IngestorDetail({ id, onClose }: Props) {
                     </tbody>
                   </table>
                 </div>
+              </section>
+            )}
+
+            {data.validation_report && (
+              <section style={{ marginBottom: "1.5rem" }}>
+                <p style={{ color: "#aaa", fontSize: 13, margin: "0 0 0.75rem", display: "flex", alignItems: "center", gap: 8 }}>
+                  Validación de Datos
+                  <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, background: data.validation_status === "errors" ? "#7f1d1d" : data.validation_status === "warnings" ? "#713f12" : "#14532d", color: data.validation_status === "errors" ? "#f87171" : data.validation_status === "warnings" ? "#facc15" : "#4ade80" }}>
+                    {data.validation_status === "errors" ? "Con errores" : data.validation_status === "warnings" ? "Con advertencias" : "Válido"}
+                  </span>
+                </p>
+                <p style={{ color: "#888", fontSize: 12, margin: "0 0 0.75rem" }}>
+                  {data.validation_report.total_filas} filas · {data.validation_report.resumen.porcentaje_completitud}% completitud
+                </p>
+                {(["errores", "advertencias", "sugerencias"] as const).map(grupo => {
+                  const items = data.validation_report![grupo] as ValidationIssue[];
+                  if (!items.length) return null;
+                  const color = grupo === "errores" ? "#f87171" : grupo === "advertencias" ? "#facc15" : "#4ade80";
+                  const label = grupo === "errores" ? "✗" : grupo === "advertencias" ? "⚠" : "ℹ";
+                  return (
+                    <div key={grupo} style={{ marginBottom: "0.75rem" }}>
+                      <p style={{ color, fontSize: 12, margin: "0 0 0.4rem", textTransform: "capitalize", fontWeight: 600 }}>{grupo} ({items.length})</p>
+                      {items.map((issue, i) => (
+                        <div key={i} style={{ fontSize: 12, color: "#d0d0d0", marginBottom: 3 }}>
+                          <span style={{ color }}>{label}</span> <span style={{ color: "#aaa", fontFamily: "monospace" }}>[{issue.campo}]</span> {issue.mensaje}
+                          {issue.filas?.length ? <span style={{ color: "#555" }}> — filas: {issue.filas.join(", ")}{issue.filas.length === 10 ? "…" : ""}</span> : null}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+                {!data.validation_report.resumen.tiene_errores && !data.validation_report.resumen.tiene_advertencias && data.validation_report.sugerencias.length === 0 && (
+                  <p style={{ color: "#4ade80", fontSize: 13, margin: 0 }}>✓ Datos completamente válidos</p>
+                )}
               </section>
             )}
 

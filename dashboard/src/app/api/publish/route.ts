@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import * as XLSX from "xlsx";
+import { generarReportValidacion } from "@/lib/dataValidator";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -63,6 +64,17 @@ export async function POST(req: Request) {
   if (error) return Response.json({ error }, { status: 500 });
 
   if (fileData) {
+    const rows: Record<string, unknown>[] = Array.isArray(fileData)
+      ? fileData as Record<string, unknown>[]
+      : Array.isArray((fileData as Record<string, unknown>).rows)
+        ? (fileData as Record<string, unknown>).rows as Record<string, unknown>[]
+        : [];
+
+    const validationReport = generarReportValidacion(rows);
+    const validationStatus = validationReport.resumen.tiene_errores ? "errors"
+      : validationReport.resumen.tiene_advertencias ? "warnings"
+      : "valid";
+
     const rawDataInsert = await supabase
       .from("raw_data")
       .insert({
@@ -72,6 +84,8 @@ export async function POST(req: Request) {
         company: req.headers.get("x-company") ?? "default",
         data_type: "raw",
         uploaded_at: new Date().toISOString(),
+        validation_report: validationReport,
+        validation_status: validationStatus,
       });
 
     if (rawDataInsert.error) {

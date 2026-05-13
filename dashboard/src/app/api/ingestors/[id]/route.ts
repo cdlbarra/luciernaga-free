@@ -33,13 +33,19 @@ function extractSourceMeta(source: unknown): { columns: string[]; recordCount: n
 export async function GET(_req: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
 
-  const [{ data: ingestor, error }, { data: runs }] = await Promise.all([
+  const [{ data: ingestor, error }, { data: runs }, { data: rawRecords }] = await Promise.all([
     supabase.from("ingestors").select("*").eq("id", id).single(),
     supabase
       .from("pipeline_runs")
       .select("*")
       .eq("ingestor_id", id)
       .order("created_at", { ascending: false })
+      .limit(1),
+    supabase
+      .from("raw_data")
+      .select("validation_report, validation_status")
+      .eq("ingestor_id", id)
+      .order("uploaded_at", { ascending: false })
       .limit(1),
   ]);
 
@@ -48,6 +54,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
   }
 
   const run = runs?.[0] ?? null;
+  const rawRec = rawRecords?.[0] ?? null;
   const report = (run?.report ?? {}) as Record<string, unknown>;
   const { columns, recordCount, previewRows } = extractSourceMeta(report.source);
   const errors: unknown[] = Array.isArray(report.errors) ? report.errors : [];
@@ -64,5 +71,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
     preview_rows: previewRows,
     errors,
     last_run: run?.created_at ?? null,
+    validation_report: rawRec?.validation_report ?? null,
+    validation_status: rawRec?.validation_status ?? null,
   });
 }

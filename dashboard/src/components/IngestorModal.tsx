@@ -1,5 +1,7 @@
 "use client";
-import { useState, useRef, type CSSProperties, type FormEvent } from "react";
+import { useState, useRef, useEffect, type CSSProperties, type FormEvent } from "react";
+import * as XLSX from "xlsx";
+import { generarReportValidacion, type ValidationReport } from "@/lib/dataValidator";
 
 type Props = {
   onClose: () => void;
@@ -24,7 +26,33 @@ export function IngestorModal({ onClose, onSuccess }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [validating, setValidating] = useState(false);
+  const [validationReport, setValidationReport] = useState<ValidationReport | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!file) { setValidationReport(null); return; }
+    setValidating(true);
+    (async () => {
+      try {
+        const buffer = await file.arrayBuffer();
+        let rows: Record<string, unknown>[] = [];
+        if (sourceType === "json") {
+          const json = JSON.parse(new TextDecoder().decode(buffer));
+          rows = Array.isArray(json) ? json : Array.isArray(json.rows) ? json.rows : [];
+        } else {
+          const wb = XLSX.read(new Uint8Array(buffer), { type: "array" });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          rows = XLSX.utils.sheet_to_json(ws) as Record<string, unknown>[];
+        }
+        setValidationReport(generarReportValidacion(rows));
+      } catch {
+        setValidationReport(null);
+      } finally {
+        setValidating(false);
+      }
+    })();
+  }, [file, sourceType]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -92,6 +120,40 @@ export function IngestorModal({ onClose, onSuccess }: Props) {
               onChange={e => setFile(e.target.files?.[0] ?? null)}
             />
           </label>
+          {validating && <p style={{ color: "#aaa", fontSize: 13, margin: "0 0 0.75rem" }}>Validando archivo…</p>}
+
+          {validationReport && (
+            <div style={{ background: "#111", border: "1px solid #2a2a2a", borderRadius: 6, padding: "0.75rem", marginBottom: "1rem", fontSize: 13 }}>
+              <p style={{ margin: "0 0 0.5rem", color: "#aaa" }}>
+                Resumen de validación — {validationReport.total_filas} filas · {validationReport.resumen.porcentaje_completitud}% completitud
+              </p>
+              {validationReport.errores.length > 0 && (
+                <div style={{ marginBottom: 4 }}>
+                  {validationReport.errores.map((e, i) => (
+                    <p key={i} style={{ margin: "2px 0", color: "#f87171" }}>✗ [{e.campo}] {e.mensaje}</p>
+                  ))}
+                </div>
+              )}
+              {validationReport.advertencias.length > 0 && (
+                <div style={{ marginBottom: 4 }}>
+                  {validationReport.advertencias.map((w, i) => (
+                    <p key={i} style={{ margin: "2px 0", color: "#facc15" }}>⚠ [{w.campo}] {w.mensaje}</p>
+                  ))}
+                </div>
+              )}
+              {validationReport.sugerencias.length > 0 && (
+                <div>
+                  {validationReport.sugerencias.map((s, i) => (
+                    <p key={i} style={{ margin: "2px 0", color: "#4ade80" }}>ℹ [{s.campo}] {s.mensaje}</p>
+                  ))}
+                </div>
+              )}
+              {!validationReport.resumen.tiene_errores && !validationReport.resumen.tiene_advertencias && (
+                <p style={{ margin: 0, color: "#4ade80" }}>✓ Sin problemas detectados</p>
+              )}
+            </div>
+          )}
+
           {error && (
             <p style={{ color: "#f87171", fontSize: 13, margin: "0 0 1rem" }}>{error}</p>
           )}
@@ -105,8 +167,9 @@ export function IngestorModal({ onClose, onSuccess }: Props) {
             </button>
             <button
               type="submit"
-              disabled={loading}
-              style={{ padding: "0.5rem 1.2rem", borderRadius: 6, border: "none", background: "#facc15", color: "#000", fontWeight: "bold", cursor: loading ? "not-allowed" : "pointer", fontSize: 14, opacity: loading ? 0.7 : 1 }}
+              disabled={loading || validating || (validationReport?.resumen.tiene_errores ?? false)}
+              title={validationReport?.resumen.tiene_errores ? "Corrige los errores antes de continuar" : undefined}
+              style={{ padding: "0.5rem 1.2rem", borderRadius: 6, border: "none", background: "#facc15", color: "#000", fontWeight: "bold", cursor: (loading || validating || validationReport?.resumen.tiene_errores) ? "not-allowed" : "pointer", fontSize: 14, opacity: (loading || validating || validationReport?.resumen.tiene_errores) ? 0.5 : 1 }}
             >
               {loading ? "Enviando…" : "Confirmar"}
             </button>
