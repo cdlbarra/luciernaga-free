@@ -1,4 +1,4 @@
-import os
+﻿import os
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -109,15 +109,15 @@ async def get_historial(usuario_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# ============ VALIDACIÓN Y CUARENTENA ============
+# ============ VALIDACIÃ“N Y CUARENTENA ============
 
 @app.post("/validate")
 async def validate_data(request: ValidateRequest):
     """
-    Valida datos según schema y devuelve acción recomendada.
+    Valida datos segÃºn schema y devuelve acciÃ³n recomendada.
     """
     try:
-        from modules.validator import Validator
+        from ingestor.modules.validator import Validator
         
         validator = Validator()
         action, result = validator.validate_record(request.data, request.schema)
@@ -137,7 +137,7 @@ async def upload_json(ingestor_id: str, records: list, schema: Optional[dict] = 
     Procesa un array de registros JSON, valida cada uno y guarda en Supabase.
     """
     try:
-        from modules.validator import Validator
+        from ingestor.modules.validator import Validator
         
         if not isinstance(records, list):
             raise HTTPException(status_code=400, detail="records debe ser un array")
@@ -230,13 +230,13 @@ async def upload_file(ingestor_id: str, file: UploadFile = File(...), schema: Op
     Carga un archivo (CSV o JSON), valida cada registro y guarda en Supabase.
     """
     try:
-        from modules.validator import Validator
+        from ingestor.modules.validator import Validator
         
         # Leer archivo
         contents = await file.read()
         filename = file.filename
         
-        # Parsear según tipo
+        # Parsear segÃºn tipo
         records = []
         if filename.endswith('.csv'):
             stream = io.StringIO(contents.decode('utf-8'))
@@ -336,7 +336,7 @@ async def upload_file(ingestor_id: str, file: UploadFile = File(...), schema: Op
 @app.get("/validation-errors")
 async def get_validation_errors(ingestor_id: str = None, severity: str = None, limit: int = 100):
     """
-    Obtiene errores de validación filtrados.
+    Obtiene errores de validaciÃ³n filtrados.
     """
     try:
         query = supabase.table("validation_errors").select("*")
@@ -398,7 +398,7 @@ async def review_quarantine(quarantine_id: str, action: str, reviewed_by: str, n
 @app.get("/validation-stats/{ingestor_id}")
 async def get_validation_stats(ingestor_id: str, days: int = 7):
     """
-    Obtiene estadísticas de validación para los últimos N días.
+    Obtiene estadÃ­sticas de validaciÃ³n para los Ãºltimos N dÃ­as.
     """
     try:
         response = (
@@ -441,7 +441,7 @@ async def get_validation_stats(ingestor_id: str, days: int = 7):
 @app.post("/validation-errors/{error_id}/log")
 async def log_validation_error(error_id: str, action_taken: str):
     """
-    Registra la acción tomada para un error de validación.
+    Registra la acciÃ³n tomada para un error de validaciÃ³n.
     action_taken: 'accepted', 'rejected', 'quarantined'
     """
     try:
