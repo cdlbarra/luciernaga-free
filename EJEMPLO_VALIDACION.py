@@ -1,5 +1,7 @@
 # ejemplo_pipeline_completo.py
 # Demostración: Procesamiento de registros de usuario con validación
+import sys
+sys.path.insert(0, 'ingestor')
 
 from modules.validator import run as validate
 from utilidades import (

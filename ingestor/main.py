@@ -1,11 +1,14 @@
 import os
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 from supabase import create_client, Client
 import httpx
+import json
+import csv
+import io
 
 # Inicializar FastAPI
 app = FastAPI(title="Luciernaga Ingestor API")
@@ -125,6 +128,208 @@ async def validate_data(request: ValidateRequest):
             "ingestor_id": request.ingestor_id,
             "timestamp": datetime.utcnow().isoformat()
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/upload-json")
+async def upload_json(ingestor_id: str, records: list, schema: Optional[dict] = None):
+    """
+    Procesa un array de registros JSON, valida cada uno y guarda en Supabase.
+    """
+    try:
+        from modules.validator import Validator
+        
+        if not isinstance(records, list):
+            raise HTTPException(status_code=400, detail="records debe ser un array")
+        
+        # Procesar cada registro
+        stats = {
+            "total": len(records),
+            "accepted": 0,
+            "quarantined": 0,
+            "rejected": 0,
+            "details": []
+        }
+        
+        validator = Validator()
+        
+        for idx, record in enumerate(records):
+            action, result = validator.validate_record(record, schema)
+            
+            # Guardar en raw_data
+            try:
+                raw_data_entry = {
+                    "ingestor_id": ingestor_id,
+                    "data": record,
+                    "uploaded_by": "api-upload-json",
+                    "company": "default",
+                    "data_type": "raw",
+                    "uploaded_at": datetime.utcnow().isoformat(),
+                    "final_status": action,
+                    "quality_score": result.get("quality_score", 0),
+                    "error_count": result.get("error_count", 0),
+                    "warning_count": result.get("warning_count", 0)
+                }
+                raw_response = supabase.table("raw_data").insert(raw_data_entry).execute()
+                raw_data_id = raw_response.data[0]["id"] if raw_response.data else None
+                
+                # Si fue enviado a cuarentena
+                if action == "quarantine":
+                    quarantine_entry = {
+                        "ingestor_id": ingestor_id,
+                        "raw_data_id": raw_data_id,
+                        "original_data": record,
+                        "quarantine_reason": "; ".join([e.get("error_type", "unknown") for e in result.get("errors", [])]),
+                        "error_details": {
+                            "errors": result.get("errors", []),
+                            "warnings": result.get("warnings", []),
+                            "quality_score": result.get("quality_score", 0)
+                        },
+                        "status": "pending"
+                    }
+                    supabase.table("quarantine").insert(quarantine_entry).execute()
+                    stats["quarantined"] += 1
+                
+                elif action == "accept":
+                    stats["accepted"] += 1
+                elif action == "reject":
+                    stats["rejected"] += 1
+                
+                stats["details"].append({
+                    "index": idx,
+                    "action": action,
+                    "quality_score": result.get("quality_score", 0),
+                    "errors": len(result.get("errors", [])),
+                    "warnings": len(result.get("warnings", []))
+                })
+                    
+            except Exception as e:
+                stats["details"].append({
+                    "index": idx,
+                    "error": str(e)
+                })
+        
+        return {
+            "message": f"Procesados {stats['total']} registros",
+            "stats": {
+                "total": stats["total"],
+                "accepted": stats["accepted"],
+                "quarantined": stats["quarantined"],
+                "rejected": stats["rejected"]
+            },
+            "details": stats["details"],
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/upload")
+async def upload_file(ingestor_id: str, file: UploadFile = File(...), schema: Optional[str] = None):
+    """
+    Carga un archivo (CSV o JSON), valida cada registro y guarda en Supabase.
+    """
+    try:
+        from modules.validator import Validator
+        
+        # Leer archivo
+        contents = await file.read()
+        filename = file.filename
+        
+        # Parsear según tipo
+        records = []
+        if filename.endswith('.csv'):
+            stream = io.StringIO(contents.decode('utf-8'))
+            reader = csv.DictReader(stream)
+            records = list(reader)
+        elif filename.endswith('.json'):
+            records = json.loads(contents.decode('utf-8'))
+            if not isinstance(records, list):
+                records = [records]
+        else:
+            raise HTTPException(status_code=400, detail="Solo CSV o JSON permitidos")
+        
+        # Parsear schema si viene
+        validation_schema = None
+        if schema:
+            validation_schema = json.loads(schema)
+        
+        # Procesar cada registro
+        stats = {
+            "total": len(records),
+            "accepted": 0,
+            "quarantined": 0,
+            "rejected": 0,
+            "errors": [],
+            "records_by_action": {"accept": [], "quarantine": [], "reject": []}
+        }
+        
+        validator = Validator()
+        
+        for idx, record in enumerate(records):
+            action, result = validator.validate_record(record, validation_schema)
+            stats["records_by_action"][action].append({
+                "index": idx,
+                "data": record,
+                "result": result
+            })
+            
+            # Guardar en raw_data
+            try:
+                raw_data_entry = {
+                    "ingestor_id": ingestor_id,
+                    "data": record,
+                    "uploaded_by": "api-upload",
+                    "company": "default",
+                    "data_type": "raw",
+                    "uploaded_at": datetime.utcnow().isoformat(),
+                    "final_status": action,
+                    "quality_score": result.get("quality_score", 0),
+                    "error_count": result.get("error_count", 0),
+                    "warning_count": result.get("warning_count", 0)
+                }
+                raw_response = supabase.table("raw_data").insert(raw_data_entry).execute()
+                raw_data_id = raw_response.data[0]["id"] if raw_response.data else None
+                
+                # Si fue enviado a cuarentena, guardar en tabla quarantine
+                if action == "quarantine":
+                    quarantine_entry = {
+                        "ingestor_id": ingestor_id,
+                        "raw_data_id": raw_data_id,
+                        "original_data": record,
+                        "quarantine_reason": "; ".join([e.get("error_type") for e in result.get("errors", [])]),
+                        "error_details": {
+                            "errors": result.get("errors", []),
+                            "warnings": result.get("warnings", []),
+                            "quality_score": result.get("quality_score", 0)
+                        },
+                        "status": "pending"
+                    }
+                    supabase.table("quarantine").insert(quarantine_entry).execute()
+                    stats["quarantined"] += 1
+                
+                # Si fue aceptado
+                elif action == "accept":
+                    stats["accepted"] += 1
+                
+                # Si fue rechazado
+                elif action == "reject":
+                    stats["rejected"] += 1
+                    
+            except Exception as e:
+                stats["errors"].append(f"Row {idx}: {str(e)}")
+        
+        return {
+            "message": f"Procesado archivo {filename}",
+            "stats": {
+                "total": stats["total"],
+                "accepted": stats["accepted"],
+                "quarantined": stats["quarantined"],
+                "rejected": stats["rejected"]
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
