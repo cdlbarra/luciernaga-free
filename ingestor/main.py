@@ -41,9 +41,15 @@ class Ingestor(BaseModel):
     estado: str = "activo"
     fecha_creacion: Optional[datetime] = None
 
+class ValidateRequest(BaseModel):
+    ingestor_id: str
+    data: dict
+    schema: Optional[dict] = None
+
 # Endpoints
 @app.get("/health")
 async def health():
+    # V2: Validation system endpoints enabled
     return {"status": "ok", "service": "ingestor"}
 
 @app.get("/ingestores", response_model=List[dict])
@@ -103,7 +109,7 @@ async def get_historial(usuario_id: str):
 # ============ VALIDACIÓN Y CUARENTENA ============
 
 @app.post("/validate")
-async def validate_data(ingestor_id: str, data: dict, schema: dict = None):
+async def validate_data(request: ValidateRequest):
     """
     Valida datos según schema y devuelve acción recomendada.
     """
@@ -111,11 +117,12 @@ async def validate_data(ingestor_id: str, data: dict, schema: dict = None):
         from modules.validator import Validator
         
         validator = Validator()
-        action, result = validator.validate_record(data, schema)
+        action, result = validator.validate_record(request.data, request.schema)
         
         return {
             "action": action,
             "result": result,
+            "ingestor_id": request.ingestor_id,
             "timestamp": datetime.utcnow().isoformat()
         }
     except Exception as e:
