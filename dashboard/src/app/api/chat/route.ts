@@ -56,13 +56,18 @@ Reglas de estilo:
   return prompt;
 }
 
+const LISTA_REGEX =
+  /\b(ver|muestra|muéstrame|lista|dame|quiero\s+ver|cuáles\s+son|cuales\s+son)\b.{0,30}\b(ingest(ores?|iones?|as?)|cargas?|datos)\b|\b(mis\s+)?(ingest(ores?|iones?|as?)|cargas?)\b/i;
+
 export async function POST(req: Request) {
   const { messages, context } = await req.json() as {
     messages: Array<{ role: string; content: string }>;
     context?: Context;
   };
 
-  const userMessage = messages[messages.length - 1]?.content;
+  const userMessage = messages[messages.length - 1]?.content ?? "";
+  const show_ingestors_list = LISTA_REGEX.test(userMessage);
+
   if (userMessage) await guardarEnSupabase("user", userMessage);
 
   const systemMessage = { role: "system", content: buildSystemPrompt(context) };
@@ -86,5 +91,5 @@ export async function POST(req: Request) {
 
   await guardarEnSupabase("assistant", content);
 
-  return Response.json({ content });
+  return Response.json({ content, show_ingestors_list });
 }

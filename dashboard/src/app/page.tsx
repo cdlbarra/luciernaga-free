@@ -18,7 +18,8 @@ import { ChatPanel } from "@/components/ChatPanel";
 
 export default function Home() {
   const [ingestors, setIngestors] = useState<any[]>([]);
-  const [showModal, setShowModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showListModal, setShowListModal] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [rawData, setRawData] = useState<RawDataRow[]>([]);
@@ -86,70 +87,31 @@ export default function Home() {
 
       {/* ── COLUMNA PRINCIPAL ── */}
       <main style={{ flex: "1 1 0", minWidth: 0 }}>
-        <h1 style={{ color: "#facc15", marginTop: 0 }}>🪲 Luciérnaga Dashboard</h1>
-        <IngestorStatus />
 
-        {/* ── INGESTORES ── */}
-        <section style={{ marginBottom: "2rem" }}>
-          <h2>Ingestores</h2>
+        {/* HEADER */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1.5rem", flexWrap: "wrap" }}>
+          <h1 style={{ color: "#facc15", margin: 0, flex: "1 1 auto" }}>🪲 Luciérnaga</h1>
           <button
-            onClick={() => setShowModal(true)}
-            style={{ background: "#facc15", color: "#000", border: "none", padding: "0.5rem 1rem", borderRadius: 6, cursor: "pointer", fontWeight: "bold" }}
+            onClick={() => setShowListModal(true)}
+            style={{ padding: "0.45rem 1rem", borderRadius: 6, border: "1px solid #facc15", background: "transparent", color: "#facc15", cursor: "pointer", fontWeight: 600, fontSize: 13 }}
+          >
+            Ver ingestiones{ingestors.length > 0 ? ` (${ingestors.length})` : ""}
+          </button>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            style={{ padding: "0.45rem 1rem", borderRadius: 6, border: "none", background: "#facc15", color: "#000", cursor: "pointer", fontWeight: "bold", fontSize: 13 }}
           >
             + Ingestor
           </button>
-          {showModal && (
-            <IngestorModal
-              onClose={() => setShowModal(false)}
-              onSuccess={(data) => {
-                setIngestors(prev => [data as any, ...prev]);
-                setStatus("✓ Ingestor registrado");
-              }}
-            />
-          )}
-          {status && <p style={{ color: status.startsWith("✓") ? "#4ade80" : "#f87171" }}>{status}</p>}
-          <ul style={{ marginTop: "1rem", listStyle: "none", padding: 0, margin: "1rem 0 0" }}>
-            {ingestors.map((ing: any) => (
-              <li
-                key={ing.id}
-                onClick={() => setSelectedId(ing.id === selectedId ? null : ing.id)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "0.5rem 0.75rem",
-                  background: ing.id === selectedId ? "#1e1e00" : "#1a1a1a",
-                  marginBottom: 8,
-                  borderRadius: 6,
-                  cursor: "pointer",
-                  border: `1px solid ${ing.id === selectedId ? "#facc15" : "transparent"}`,
-                  transition: "border-color 0.15s",
-                }}
-                onMouseEnter={e => { if (ing.id !== selectedId) e.currentTarget.style.borderColor = "#444"; }}
-                onMouseLeave={e => { if (ing.id !== selectedId) e.currentTarget.style.borderColor = "transparent"; }}
-              >
-                <span><strong>{ing.name}</strong> — {ing.source_type} — {ing.status}</span>
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    if (!confirm(`¿Eliminar el ingestor "${ing.name}"?`)) return;
-                    const res = await fetch(`/api/publish?id=${ing.id}`, { method: "DELETE" });
-                    if (res.ok) {
-                      setIngestors(prev => prev.filter(i => i.id !== ing.id));
-                      if (selectedId === ing.id) setSelectedId(null);
-                    }
-                  }}
-                  style={{ background: "#ef4444", color: "#fff", border: "none", padding: "0.3rem 0.75rem", borderRadius: 5, cursor: "pointer", fontSize: 13, fontWeight: "bold", flexShrink: 0 }}
-                >
-                  Eliminar
-                </button>
-              </li>
-            ))}
-          </ul>
-          {selectedId && (
-            <IngestorDetail id={selectedId} onClose={() => setSelectedId(null)} />
-          )}
-        </section>
+        </div>
+
+        {status && (
+          <p style={{ color: status.startsWith("✓") ? "#4ade80" : "#f87171", margin: "0 0 1rem", fontSize: 14 }}>
+            {status}
+          </p>
+        )}
+
+        <IngestorStatus />
 
         {/* ── RAW DATA ── */}
         <section style={{ marginBottom: "2rem" }}>
@@ -246,8 +208,108 @@ export default function Home() {
           ingestorId={selectedId}
           ingestorName={selectedIngestor?.name}
           onTransformApplied={() => fetchRawData(rawFilter)}
+          onShowIngestors={() => setShowListModal(true)}
         />
       </aside>
+
+      {/* ── MODAL: CREAR INGESTOR ── */}
+      {showCreateModal && (
+        <IngestorModal
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={(data) => {
+            setIngestors(prev => [data as any, ...prev]);
+            setStatus("✓ Ingestor registrado");
+            setShowCreateModal(false);
+          }}
+        />
+      )}
+
+      {/* ── MODAL: LISTA DE INGESTIONES ── */}
+      {showListModal && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.78)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60 }}
+          onClick={() => setShowListModal(false)}
+        >
+          <div
+            style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 10, padding: "1.5rem", width: "100%", maxWidth: 560, maxHeight: "80vh", overflowY: "auto" }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+              <h2 style={{ margin: 0, color: "#facc15", fontSize: 18 }}>
+                Mis ingestiones
+                {ingestors.length > 0 && (
+                  <span style={{ fontSize: 13, color: "#666", marginLeft: 8, fontWeight: 400 }}>
+                    ({ingestors.length})
+                  </span>
+                )}
+              </h2>
+              <button
+                onClick={() => setShowListModal(false)}
+                style={{ background: "none", border: "none", color: "#666", fontSize: 20, cursor: "pointer", lineHeight: 1 }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {ingestors.length === 0 ? (
+              <p style={{ color: "#555", fontSize: 14, textAlign: "center", padding: "2rem 0" }}>
+                No hay ingestores registrados aún.
+              </p>
+            ) : (
+              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                {ingestors.map((ing: any) => (
+                  <li
+                    key={ing.id}
+                    onClick={() => {
+                      setSelectedId(ing.id === selectedId ? null : ing.id);
+                      setShowListModal(false);
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "0.6rem 0.75rem",
+                      background: ing.id === selectedId ? "#1e1e00" : "#111",
+                      marginBottom: 6,
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      border: `1px solid ${ing.id === selectedId ? "#facc15" : "#2a2a2a"}`,
+                    }}
+                    onMouseEnter={e => { if (ing.id !== selectedId) e.currentTarget.style.borderColor = "#444"; }}
+                    onMouseLeave={e => { if (ing.id !== selectedId) e.currentTarget.style.borderColor = "#2a2a2a"; }}
+                  >
+                    <div>
+                      <div style={{ color: "#f0f0f0", fontWeight: 600, fontSize: 14 }}>{ing.name}</div>
+                      <div style={{ color: "#666", fontSize: 12, marginTop: 2 }}>
+                        {ing.source_type} · {ing.status}
+                      </div>
+                    </div>
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (!confirm(`¿Eliminar "${ing.name}"?`)) return;
+                        const res = await fetch(`/api/publish?id=${ing.id}`, { method: "DELETE" });
+                        if (res.ok) {
+                          setIngestors(prev => prev.filter(i => i.id !== ing.id));
+                          if (selectedId === ing.id) setSelectedId(null);
+                        }
+                      }}
+                      style={{ background: "#ef4444", color: "#fff", border: "none", padding: "0.3rem 0.65rem", borderRadius: 5, cursor: "pointer", fontSize: 12, fontWeight: "bold", flexShrink: 0 }}
+                    >
+                      Eliminar
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: DETALLE INGESTOR ── */}
+      {selectedId && (
+        <IngestorDetail id={selectedId} onClose={() => setSelectedId(null)} />
+      )}
 
     </div>
   );

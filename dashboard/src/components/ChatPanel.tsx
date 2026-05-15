@@ -10,6 +10,7 @@ interface Props {
   ingestorId?: string | null;
   ingestorName?: string;
   onTransformApplied?: () => void;
+  onShowIngestors?: () => void;
 }
 
 const INGESTOR_URL = process.env.NEXT_PUBLIC_INGESTOR_URL || "http://localhost:8000";
@@ -21,7 +22,7 @@ const iconPorTipo: Record<string, string> = {
   info: "ℹ️",
 };
 
-export function ChatPanel({ ingestorId, ingestorName, onTransformApplied }: Props) {
+export function ChatPanel({ ingestorId, ingestorName, onTransformApplied, onShowIngestors }: Props) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [cargando, setCargando] = useState(false);
@@ -140,6 +141,7 @@ export function ChatPanel({ ingestorId, ingestorName, onTransformApplied }: Prop
       });
       const data = await res.json();
       setMessages(prev => [...prev, { role: "assistant", content: data.content }]);
+      if (data.show_ingestors_list) onShowIngestors?.();
     } catch {
       setMessages(prev => [...prev, { role: "assistant", content: "Error al conectar con el asistente." }]);
     }
