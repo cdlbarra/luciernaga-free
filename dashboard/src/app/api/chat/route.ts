@@ -78,8 +78,20 @@ export async function POST(req: Request) {
 
   if (userMessage) await guardarEnSupabase("user", userMessage);
 
-  const systemMessage = { role: "system", content: buildSystemPrompt(context) };
-  const allMessages = [systemMessage, ...messages];
+  const systemContent = buildSystemPrompt(context);
+
+  // LLaMA 3 via HF router ignora el system role en multi-turno.
+  // Inyectamos el prompt directamente en el primer mensaje de usuario.
+  const [first, ...rest] = messages;
+  const messagesForAPI = first
+    ? [
+        {
+          role: "user" as const,
+          content: `${systemContent}\n\n---\n\n${first.content}`,
+        },
+        ...rest,
+      ]
+    : [{ role: "user" as const, content: systemContent }];
 
   const res = await fetch("https://router.huggingface.co/v1/chat/completions", {
     method: "POST",
@@ -89,7 +101,7 @@ export async function POST(req: Request) {
     },
     body: JSON.stringify({
       model: "meta-llama/Meta-Llama-3-8B-Instruct",
-      messages: allMessages,
+      messages: messagesForAPI,
     }),
   });
 
