@@ -1,4 +1,5 @@
-﻿import os
+﻿# Luciérnaga MVP - Ingestor API (v2)
+import os
 import logging
 import traceback
 from fastapi import FastAPI, HTTPException, UploadFile, File
