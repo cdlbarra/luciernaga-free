@@ -13,7 +13,6 @@ type RawDataRow = {
 
 import { IngestorModal } from "@/components/IngestorModal";
 import { IngestorDetail } from "@/components/IngestorDetail";
-import { IngestorStatus } from "@/components/IngestorStatus";
 import { ChatPanel } from "@/components/ChatPanel";
 
 export default function Home() {
@@ -110,8 +109,6 @@ export default function Home() {
             {status}
           </p>
         )}
-
-        <IngestorStatus />
 
         {/* ── RAW DATA ── */}
         <section style={{ marginBottom: "2rem" }}>
