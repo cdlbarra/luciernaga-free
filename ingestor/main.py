@@ -167,6 +167,43 @@ async def transform(req: TransformRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/suggest/{ingestor_id}")
+async def suggest(ingestor_id: str):
+    try:
+        from ingestor.modules.transformer import suggest_transformations, _extract_records
+    except ImportError:
+        from modules.transformer import suggest_transformations, _extract_records
+
+    try:
+        raw_resp = (
+            supabase.table("raw_data")
+            .select("id, data")
+            .eq("ingestor_id", ingestor_id)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+
+        if not raw_resp.data:
+            return {"sugerencias": [], "total_registros": 0, "raw_data_id": None}
+
+        raw_record = raw_resp.data[0]
+        raw_json = raw_record.get("data", {})
+        sugerencias = suggest_transformations(raw_json)
+        records = _extract_records(raw_json)
+
+        return {
+            "sugerencias": sugerencias,
+            "total_registros": len(records),
+            "raw_data_id": raw_record["id"],
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error en GET /suggest/%s:\n%s", ingestor_id, traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/chat/guardar-mensaje")
 async def guardar_mensaje(mensaje: MensajeChat):
     try:

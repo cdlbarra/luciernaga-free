@@ -182,6 +182,101 @@ def aggregate_metadata(metadata_list: List[Dict]) -> Dict:
     return result
 
 
+def _extract_records(raw_json: Any) -> List[Dict]:
+    if isinstance(raw_json, list):
+        return [r for r in raw_json if isinstance(r, dict)]
+    if isinstance(raw_json, dict):
+        for key in ("rows", "records", "data", "items"):
+            if isinstance(raw_json.get(key), list):
+                return [r for r in raw_json[key] if isinstance(r, dict)]
+        # Columnar format: {"col1": [...], "col2": [...]}
+        vals = list(raw_json.values())
+        if vals and isinstance(vals[0], list):
+            keys = list(raw_json.keys())
+            length = len(vals[0])
+            return [{keys[j]: vals[j][i] for j in range(len(keys)) if i < len(vals[j])} for i in range(length)]
+        return [raw_json]
+    return []
+
+
+def _check_field(field: str, values: List[Any], sugerencias: List[Dict]) -> None:
+    total = len(values)
+    if total == 0:
+        return
+
+    non_null = [v for v in values if v is not None and v != ""]
+    nulos = total - len(non_null)
+
+    if nulos > 0:
+        pct = nulos / total * 100
+        numeric_vals = []
+        for v in non_null:
+            try:
+                numeric_vals.append(float(str(v).replace(",", ".")))
+            except ValueError:
+                break
+        solucion = "Rellenar con promedio" if len(numeric_vals) == len(non_null) else "Rellenar con 'Sin dato'"
+        sugerencias.append({
+            "tipo": "error" if pct > 20 else "warning",
+            "campo": field,
+            "problema": f"{nulos} valores faltantes ({pct:.1f}%)",
+            "solucion": solucion,
+        })
+
+    str_vals = [str(v).strip() for v in non_null if isinstance(v, str)]
+    if str_vals:
+        # Fechas no ISO
+        date_ok = sum(1 for v in str_vals[:50] if _try_parse_date(v)[0])
+        if date_ok > len(str_vals[:50]) * 0.5:
+            iso_ok = sum(1 for v in str_vals[:50] if v[:4].isdigit() and "-" in v)
+            if iso_ok < date_ok:
+                sugerencias.append({
+                    "tipo": "warning",
+                    "campo": field,
+                    "problema": "Fechas en formato no ISO",
+                    "solucion": "Normalizar a YYYY-MM-DD",
+                })
+
+        # Mayúsculas inconsistentes
+        unique = set(str_vals)
+        unique_lower = set(v.lower() for v in str_vals)
+        if len(unique) > len(unique_lower):
+            sugerencias.append({
+                "tipo": "suggestion",
+                "campo": field,
+                "problema": "Mayúsculas inconsistentes",
+                "solucion": "Normalizar a minúsculas",
+            })
+
+        # Espacios sobrantes
+        if any(v != v.strip() for v in [str(x) for x in non_null]):
+            sugerencias.append({
+                "tipo": "suggestion",
+                "campo": field,
+                "problema": "Espacios al inicio o final",
+                "solucion": "Aplicar trim()",
+            })
+
+
+def suggest_transformations(raw_json: Any) -> List[Dict]:
+    """
+    Analiza raw_json y retorna lista de sugerencias de transformación.
+    Cada sugerencia: {tipo, campo, problema, solucion}
+    """
+    records = _extract_records(raw_json)
+    if not records:
+        return []
+
+    fields = list(records[0].keys()) if records else []
+    sugerencias: List[Dict] = []
+
+    for field in fields:
+        values = [r.get(field) for r in records]
+        _check_field(field, values, sugerencias)
+
+    return sugerencias
+
+
 def run(context: dict) -> dict:
     """
     Módulo transformer — integración con el pipeline.
