@@ -1,4 +1,6 @@
 ﻿import os
+import logging
+import traceback
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -9,6 +11,9 @@ import httpx
 import json
 import csv
 import io
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 # Inicializar FastAPI
 app = FastAPI(title="Luciernaga Ingestor API")
@@ -73,6 +78,7 @@ async def get_ingestores():
         response = supabase.table("ingestores").select("*").execute()
         return response.data
     except Exception as e:
+        logger.error("Error en GET /ingestores:\n%s", traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/ingestores/{id}")
@@ -113,6 +119,7 @@ async def get_ingestor(id: str):
     except HTTPException:
         raise
     except Exception as e:
+        logger.error("Error en GET /ingestores/%s:\n%s", id, traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/ingestores/{id}")
@@ -121,6 +128,7 @@ async def delete_ingestor(id: str):
         supabase.table("ingestores").delete().eq("id", id).execute()
         return {"message": "Ingestor eliminado"}
     except Exception as e:
+        logger.error("Error en DELETE /ingestores/%s:\n%s", id, traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/transform")
@@ -154,6 +162,7 @@ async def transform(req: TransformRequest):
     except HTTPException:
         raise
     except Exception as e:
+        logger.error("Error en POST /transform:\n%s", traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -169,6 +178,7 @@ async def guardar_mensaje(mensaje: MensajeChat):
         response = supabase.table("chat_historial").insert(data).execute()
         return response.data
     except Exception as e:
+        logger.error("Error en endpoint:\n%s", traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/chat/historial/{usuario_id}")
@@ -183,6 +193,7 @@ async def get_historial(usuario_id: str):
         )
         return response.data
     except Exception as e:
+        logger.error("Error en endpoint:\n%s", traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 # ============ VALIDACIÃ“N Y CUARENTENA ============
@@ -205,6 +216,7 @@ async def validate_data(request: ValidateRequest):
             "timestamp": datetime.utcnow().isoformat()
         }
     except Exception as e:
+        logger.error("Error en endpoint:\n%s", traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/upload-json")
@@ -298,6 +310,7 @@ async def upload_json(ingestor_id: str, records: list, schema: Optional[dict] = 
         }
         
     except Exception as e:
+        logger.error("Error en endpoint:\n%s", traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/upload")
@@ -407,6 +420,7 @@ async def upload_file(ingestor_id: str, file: UploadFile = File(...), schema: Op
         }
         
     except Exception as e:
+        logger.error("Error en endpoint:\n%s", traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/validation-errors")
@@ -425,6 +439,7 @@ async def get_validation_errors(ingestor_id: str = None, severity: str = None, l
         response = query.order("created_at", desc=True).limit(limit).execute()
         return response.data
     except Exception as e:
+        logger.error("Error en endpoint:\n%s", traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/quarantine")
@@ -445,6 +460,7 @@ async def get_quarantine(ingestor_id: str = None, status: str = "pending", limit
         response = query.order("created_at", desc=True).limit(limit).execute()
         return response.data
     except Exception as e:
+        logger.error("Error en endpoint:\n%s", traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/quarantine/{quarantine_id}/review")
@@ -469,6 +485,7 @@ async def review_quarantine(quarantine_id: str, action: str, reviewed_by: str, n
         response = supabase.table("quarantine").update(data).eq("id", quarantine_id).execute()
         return response.data
     except Exception as e:
+        logger.error("Error en endpoint:\n%s", traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/validation-stats/{ingestor_id}")
@@ -512,6 +529,7 @@ async def get_validation_stats(ingestor_id: str, days: int = 7):
             "daily_breakdown": response.data
         }
     except Exception as e:
+        logger.error("Error en endpoint:\n%s", traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/validation-errors/{error_id}/log")
@@ -530,6 +548,7 @@ async def log_validation_error(error_id: str, action_taken: str):
         
         return response.data
     except Exception as e:
+        logger.error("Error en endpoint:\n%s", traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
