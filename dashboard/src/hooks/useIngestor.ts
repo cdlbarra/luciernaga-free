@@ -25,7 +25,7 @@ export function useIngestor() {
       setCargando(true);
       const res = await fetch(`${INGESTOR_URL}/ingestores`);
       const data = await res.json();
-      return data.ingestores || [];
+      return Array.isArray(data) ? data : [];
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error desconocido");
       return [];
@@ -92,7 +92,7 @@ export function useIngestor() {
       setCargando(true);
       const res = await fetch(`${INGESTOR_URL}/chat/historial/${usuarioId}`);
       const data = await res.json();
-      return data.mensajes || [];
+      return Array.isArray(data) ? data : [];
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error desconocido");
       return [];
