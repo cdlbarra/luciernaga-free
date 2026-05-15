@@ -49,7 +49,19 @@ class ValidateRequest(BaseModel):
     data: dict
     schema: Optional[dict] = None
 
+class TransformRequest(BaseModel):
+    ingestor_id: str
+    raw_data_id: str
+
 # Endpoints
+def _aggregate_metadata(metadata_list: list) -> dict:
+    try:
+        from ingestor.modules.transformer import aggregate_metadata
+    except ImportError:
+        from modules.transformer import aggregate_metadata
+    return aggregate_metadata(metadata_list)
+
+
 @app.get("/health")
 async def health():
     # V2: Validation system endpoints enabled
@@ -66,10 +78,40 @@ async def get_ingestores():
 @app.get("/ingestores/{id}")
 async def get_ingestor(id: str):
     try:
-        response = supabase.table("ingestores").select("*").eq("id", id).execute()
-        if not response.data:
+        ingestor_resp = supabase.table("ingestores").select("*").eq("id", id).execute()
+        if not ingestor_resp.data:
             raise HTTPException(status_code=404, detail="Ingestor no encontrado")
-        return response.data[0]
+        ingestor = ingestor_resp.data[0]
+
+        raw_resp = (
+            supabase.table("raw_data")
+            .select("*")
+            .eq("ingestor_id", id)
+            .order("created_at", desc=True)
+            .limit(50)
+            .execute()
+        )
+
+        transformed_resp = (
+            supabase.table("transformed_data")
+            .select("*")
+            .eq("ingestor_id", id)
+            .order("created_at", desc=True)
+            .limit(50)
+            .execute()
+        )
+
+        metadata_list = [r.get("metadata", {}) for r in transformed_resp.data]
+        aggregated_metadata = _aggregate_metadata(metadata_list)
+
+        return {
+            **ingestor,
+            "raw_data": raw_resp.data,
+            "transformed_data": transformed_resp.data,
+            "metadata": aggregated_metadata,
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -80,6 +122,40 @@ async def delete_ingestor(id: str):
         return {"message": "Ingestor eliminado"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/transform")
+async def transform(req: TransformRequest):
+    try:
+        from ingestor.modules.transformer import transform_data
+    except ImportError:
+        from modules.transformer import transform_data
+
+    try:
+        raw_resp = supabase.table("raw_data").select("*").eq("id", req.raw_data_id).execute()
+        if not raw_resp.data:
+            raise HTTPException(status_code=404, detail="raw_data no encontrado")
+
+        raw_json = raw_resp.data[0].get("data", {})
+        transformed, metadata = transform_data(raw_json)
+
+        entry = {
+            "ingestor_id": req.ingestor_id,
+            "raw_data_id": req.raw_data_id,
+            "data": transformed,
+            "metadata": metadata,
+        }
+        result = supabase.table("transformed_data").insert(entry).execute()
+
+        if not result.data:
+            raise HTTPException(status_code=500, detail="Error al guardar en transformed_data")
+
+        return {"success": True, "transformed_data_id": result.data[0]["id"]}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/chat/guardar-mensaje")
 async def guardar_mensaje(mensaje: MensajeChat):
