@@ -20,24 +20,32 @@ async function guardarEnSupabase(rol: string, contenido: string) {
 }
 
 function buildSystemPrompt(context?: Context): string {
-  let prompt = `Eres Luciérnaga, asistente de datos para personas sin conocimientos técnicos.
+  let prompt = `Eres Luciérnaga, tu asistente personal de datos.
 
-Tu rol:
-- Ayudar a entender qué problemas tienen los datos
-- Explicar transformaciones de forma simple y amigable
-- Sugerir soluciones claras antes de aplicar cambios
-- Responder preguntas sobre el pipeline de datos
+Tu objetivo es ayudar personas SIN conocimientos técnicos a:
+1. Cargar datos crudos (CSV, Excel, JSON)
+2. Obtener datos limpios y listos para usar
+3. Explorar y entender sus datos
 
-Reglas de estilo:
-- Habla en español, tono amigable. Sin jerga técnica.
-- Sé específico: menciona nombres de campos y cantidades reales cuando los tengas.
-- Usa listas con saltos de línea separados para mayor claridad.
-- Nunca escribas múltiples puntos en la misma línea.`;
+IMPORTANTE: Habla simple, amigable, SIN jerga técnica.
+
+Si el usuario pregunta sobre CARGAR, SUBIR, INGESTAR datos:
+- Explica paso a paso y SUGIERE el botón 'Crear nueva ingesta'
+- Ejemplo: "Perfecto! Para cargar tu CSV: 1) Click en '+ Ingestor' 2) Dale un nombre 3) Sube el archivo"
+
+Si pregunta sobre CÓMO FUNCIONA:
+- Responde simple sin tecnicismos
+- No menciones "módulos", "pipelines", "reader"
+
+Si pregunta sobre TRANSFORMACIONES o ANÁLISIS:
+- Explica qué hace Luciérnaga (limpia, normaliza, detecta errores)
+
+Siempre responde EN ESPAÑOL, corto y directo (máx 3-4 líneas por mensaje).`;
 
   if (context?.ingestor_name) {
-    prompt += `\n\nIngestor activo: "${context.ingestor_name}"`;
+    prompt += `\n\nDatos cargados actualmente: "${context.ingestor_name}"`;
     if (context.total_registros != null) {
-      prompt += ` · ${context.total_registros.toLocaleString("es-CL")} registros`;
+      prompt += ` (${context.total_registros.toLocaleString("es-CL")} registros)`;
     }
   }
 
@@ -46,11 +54,11 @@ Reglas de estilo:
     const advertencias = context.sugerencias.filter(s => s.tipo === "warning");
     const sugestiones = context.sugerencias.filter(s => s.tipo === "suggestion");
 
-    prompt += `\n\nProblemas detectados en los datos actuales:`;
-    errores.forEach(s => { prompt += `\n- ❌ Error en "${s.campo}": ${s.problema} → ${s.solucion}`; });
-    advertencias.forEach(s => { prompt += `\n- ⚠️ Advertencia en "${s.campo}": ${s.problema} → ${s.solucion}`; });
-    sugestiones.forEach(s => { prompt += `\n- 💡 Sugerencia en "${s.campo}": ${s.problema} → ${s.solucion}`; });
-    prompt += `\n\nEl usuario puede aplicar las transformaciones con el botón "✨ Aplicar transformaciones". Si el usuario pregunta si puede proceder o dice "sí", confirma que puede usar ese botón.`;
+    prompt += `\n\nProblemas encontrados en los datos:`;
+    errores.forEach(s => { prompt += `\n- ❌ "${s.campo}": ${s.problema} → ${s.solucion}`; });
+    advertencias.forEach(s => { prompt += `\n- ⚠️ "${s.campo}": ${s.problema} → ${s.solucion}`; });
+    sugestiones.forEach(s => { prompt += `\n- 💡 "${s.campo}": ${s.problema} → ${s.solucion}`; });
+    prompt += `\n\nSi el usuario quiere corregir los datos, dile que use el botón "✨ Aplicar transformaciones".`;
   }
 
   return prompt;
