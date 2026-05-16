@@ -13,8 +13,6 @@ interface Props {
   onShowIngestors?: () => void;
 }
 
-const INGESTOR_URL = process.env.NEXT_PUBLIC_INGESTOR_URL || "http://localhost:8000";
-
 const iconPorTipo: Record<string, string> = {
   error: "❌",
   warning: "⚠️",
@@ -91,7 +89,7 @@ export function ChatPanel({ ingestorId, ingestorName, onTransformApplied, onShow
     if (!ingestorId || !rawDataId) return;
     setTransformando(true);
     try {
-      const res = await fetch(`${INGESTOR_URL}/transform`, {
+      const res = await fetch(`/api/transform`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ingestor_id: ingestorId, raw_data_id: rawDataId }),
