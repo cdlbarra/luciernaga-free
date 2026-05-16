@@ -28,6 +28,7 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   const { id } = await context.params;
+  console.log("[suggest] ingestor_id recibido:", id);
 
   const { data: rawRecord, error } = await supabase
     .from("raw_data")
@@ -36,6 +37,9 @@ export async function GET(
     .order("created_at", { ascending: false })
     .limit(1)
     .single();
+
+  console.log("[suggest] rawRecord:", rawRecord ? { id: rawRecord.id, dataType: typeof rawRecord.data, isArray: Array.isArray(rawRecord.data), length: Array.isArray(rawRecord.data) ? rawRecord.data.length : null } : null);
+  console.log("[suggest] error:", error);
 
   if (error || !rawRecord) {
     return Response.json({ sugerencias: [], total_registros: 0, raw_data_id: null });
