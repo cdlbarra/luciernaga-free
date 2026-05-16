@@ -119,6 +119,30 @@ export function detectarOutliers(filas: Record<string, unknown>[], tipos: FieldT
   return issues;
 }
 
+// Excel serial dates: day count since 1900-01-01. Range 30000–60000 ≈ 1982–2064.
+const EXCEL_DATE_MIN = 30000;
+const EXCEL_DATE_MAX = 60000;
+
+export function detectarFechasSeriales(filas: Record<string, unknown>[], tipos: FieldTypes): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  for (const [campo, tipo] of Object.entries(tipos)) {
+    if (tipo !== "number") continue;
+    const nums = filas
+      .map(f => Number(f[campo]))
+      .filter(v => !isNaN(v) && Number.isInteger(v));
+    if (nums.length < Math.ceil(filas.length * 0.8)) continue;
+    const enRango = nums.filter(v => v >= EXCEL_DATE_MIN && v <= EXCEL_DATE_MAX);
+    if (enRango.length >= Math.ceil(nums.length * 0.9)) {
+      issues.push({
+        type: "warning",
+        campo,
+        mensaje: `Los valores parecen fechas seriales de Excel (ej. ${nums[0]}). Convertir a formato fecha legible.`,
+      });
+    }
+  }
+  return issues;
+}
+
 export function generarReportValidacion(filas: Record<string, unknown>[]): ValidationReport {
   if (!filas.length) {
     return { total_filas: 0, tipos_detectados: {}, errores: [], advertencias: [], sugerencias: [], resumen: { tiene_errores: false, tiene_advertencias: false, porcentaje_completitud: 100 } };
@@ -129,6 +153,7 @@ export function generarReportValidacion(filas: Record<string, unknown>[]): Valid
     ...detectarValoresFaltantes(filas),
     ...detectarDuplicados(filas),
     ...detectarOutliers(filas, tipos),
+    ...detectarFechasSeriales(filas, tipos),
   ];
   const errores = todos.filter(i => i.type === "error");
   const advertencias = todos.filter(i => i.type === "warning");
