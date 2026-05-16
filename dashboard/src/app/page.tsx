@@ -20,6 +20,7 @@ export default function Home() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showListModal, setShowListModal] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [rawData, setRawData] = useState<RawDataRow[]>([]);
   const [rawFilter, setRawFilter] = useState({ uploaded_by: "", company: "" });
@@ -283,14 +284,9 @@ export default function Home() {
                       </div>
                     </div>
                     <button
-                      onClick={async (e) => {
+                      onClick={(e) => {
                         e.stopPropagation();
-                        if (!confirm(`¿Eliminar "${ing.name}"?`)) return;
-                        const res = await fetch(`/api/publish?id=${ing.id}`, { method: "DELETE" });
-                        if (res.ok) {
-                          setIngestors(prev => prev.filter(i => i.id !== ing.id));
-                          if (selectedId === ing.id) setSelectedId(null);
-                        }
+                        setConfirmDelete({ id: ing.id, name: ing.name });
                       }}
                       style={{ background: "#ef4444", color: "#fff", border: "none", padding: "0.3rem 0.65rem", borderRadius: 5, cursor: "pointer", fontSize: 12, fontWeight: "bold", flexShrink: 0 }}
                     >
@@ -307,6 +303,45 @@ export default function Home() {
       {/* ── MODAL: DETALLE INGESTOR ── */}
       {selectedId && (
         <IngestorDetail id={selectedId} onClose={() => setSelectedId(null)} />
+      )}
+
+      {/* ── MODAL: CONFIRMAR ELIMINACIÓN ── */}
+      {confirmDelete && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 70 }}
+          onClick={() => setConfirmDelete(null)}
+        >
+          <div
+            style={{ background: "#1a1a1a", border: "1px solid #3a3a3a", borderRadius: 10, padding: "1.75rem", width: "100%", maxWidth: 400 }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 style={{ margin: "0 0 0.75rem", color: "#f0f0f0", fontSize: 16 }}>¿Eliminar "{confirmDelete.name}"?</h3>
+            <p style={{ margin: "0 0 1.5rem", color: "#aaa", fontSize: 14, lineHeight: 1.6 }}>
+              ¿Estás seguro? Se eliminarán el ingestor y todos sus datos asociados. Esta acción no se puede deshacer.
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setConfirmDelete(null)}
+                style={{ padding: "0.5rem 1.1rem", borderRadius: 6, border: "1px solid #444", background: "transparent", color: "#f0f0f0", cursor: "pointer", fontSize: 13 }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  const res = await fetch(`/api/publish?id=${confirmDelete.id}`, { method: "DELETE" });
+                  if (res.ok) {
+                    setIngestors(prev => prev.filter(i => i.id !== confirmDelete.id));
+                    if (selectedId === confirmDelete.id) setSelectedId(null);
+                  }
+                  setConfirmDelete(null);
+                }}
+                style={{ padding: "0.5rem 1.1rem", borderRadius: 6, border: "none", background: "#ef4444", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: "bold" }}
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
