@@ -110,8 +110,8 @@ export default function Home() {
           </p>
         )}
 
-        {/* ── RAW DATA (desactivado) ── */}
-        {false && <section style={{ marginBottom: "2rem" }}>
+        {/* ── RAW DATA (desactivado) ──
+        <section style={{ marginBottom: "2rem" }}>
           <h2>Raw Data</h2>
           <div style={{ display: "flex", gap: 8, marginBottom: "1rem", flexWrap: "wrap" }}>
             <select
@@ -196,7 +196,8 @@ export default function Home() {
               )}
             </div>
           )}
-        </section>}
+        </section>
+        */}
       </main>
 
       {/* ── PANEL CHAT ── */}
