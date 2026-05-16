@@ -91,7 +91,7 @@ export default function Home() {
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1.5rem", flexWrap: "wrap" }}>
           <h1 style={{ color: "#facc15", margin: 0, flex: "1 1 auto" }}>🪲 Luciérnaga</h1>
           <button
-            onClick={() => setShowListModal(true)}
+            onClick={() => setShowListModal(v => !v)}
             style={{ padding: "0.45rem 1rem", borderRadius: 6, border: "1px solid #facc15", background: "transparent", color: "#facc15", cursor: "pointer", fontWeight: 600, fontSize: 13 }}
           >
             Ver ingestiones{ingestors.length > 0 ? ` (${ingestors.length})` : ""}
