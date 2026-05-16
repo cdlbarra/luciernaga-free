@@ -36,6 +36,7 @@ export function ChatPanel({ ingestorId, ingestorName, onTransformApplied, onShow
   }, [messages, cargando]);
 
   useEffect(() => {
+    console.log("[ChatPanel] useEffect ingestorId:", ingestorId, "prev:", prevIngestorIdRef.current);
     if (prevIngestorIdRef.current === ingestorId) return;
     prevIngestorIdRef.current = ingestorId;
 
@@ -48,10 +49,13 @@ export function ChatPanel({ ingestorId, ingestorName, onTransformApplied, onShow
   }, [ingestorId]);
 
   async function cargarSugerencias(id: string) {
+    console.log("[ChatPanel] cargarSugerencias llamado con id:", id);
     try {
       const res = await fetch(`/api/suggest/${id}`);
+      console.log("[ChatPanel] /api/suggest status:", res.status);
       if (!res.ok) return;
       const data = await res.json();
+      console.log("[ChatPanel] respuesta suggest:", data);
       const sugs: Sugerencia[] = data.sugerencias ?? [];
       const total: number = data.total_registros ?? 0;
       const rdId: string | null = data.raw_data_id ?? null;

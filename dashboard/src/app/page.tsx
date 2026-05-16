@@ -260,7 +260,9 @@ export default function Home() {
                   <li
                     key={ing.id}
                     onClick={() => {
-                      setSelectedId(ing.id === selectedId ? null : ing.id);
+                      const nextId = ing.id === selectedId ? null : ing.id;
+                      console.log("[page] ingestor seleccionado:", ing.name, "id:", nextId);
+                      setSelectedId(nextId);
                       setShowListModal(false);
                     }}
                     style={{
