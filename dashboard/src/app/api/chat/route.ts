@@ -80,33 +80,25 @@ export async function POST(req: Request) {
 
   const systemContent = buildSystemPrompt(context);
 
-  // LLaMA 3 via HF router ignora el system role en multi-turno.
-  // Inyectamos el prompt directamente en el primer mensaje de usuario.
-  const [first, ...rest] = messages;
-  const messagesForAPI = first
-    ? [
-        {
-          role: "user" as const,
-          content: `${systemContent}\n\n---\n\n${first.content}`,
-        },
-        ...rest,
-      ]
-    : [{ role: "user" as const, content: systemContent }];
+  const messagesForAPI = [
+    { role: "system" as const, content: systemContent },
+    ...messages,
+  ];
 
-  const res = await fetch("https://router.huggingface.co/v1/chat/completions", {
+  const res = await fetch("https://api.cohere.com/v2/chat", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.HF_TOKEN}`,
+      Authorization: `Bearer ${process.env.COHERE_API_KEY}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "meta-llama/Meta-Llama-3-8B-Instruct",
+      model: "command-r-08-2024",
       messages: messagesForAPI,
     }),
   });
 
   const data = await res.json();
-  const raw = data.choices?.[0]?.message?.content ?? JSON.stringify(data);
+  const raw = data.message?.content?.[0]?.text ?? JSON.stringify(data);
   const content = raw.replace(/(\d+)\.\s+/g, "\n\n$1. ");
 
   await guardarEnSupabase("assistant", content);
