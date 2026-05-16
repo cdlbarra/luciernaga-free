@@ -9,7 +9,6 @@ type Msg = { role: "user" | "assistant"; content: string };
 interface Props {
   ingestorId?: string | null;
   ingestorName?: string;
-  onTransformApplied?: () => void;
   onShowIngestors?: () => void;
 }
 
@@ -20,7 +19,7 @@ const iconPorTipo: Record<string, string> = {
   info: "ℹ️",
 };
 
-export function ChatPanel({ ingestorId, ingestorName, onTransformApplied, onShowIngestors }: Props) {
+export function ChatPanel({ ingestorId, ingestorName, onShowIngestors }: Props) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [cargando, setCargando] = useState(false);
@@ -36,7 +35,6 @@ export function ChatPanel({ ingestorId, ingestorName, onTransformApplied, onShow
   }, [messages, cargando]);
 
   useEffect(() => {
-    console.log("[ChatPanel] useEffect ingestorId:", ingestorId, "prev:", prevIngestorIdRef.current);
     if (prevIngestorIdRef.current === ingestorId) return;
     prevIngestorIdRef.current = ingestorId;
 
@@ -49,13 +47,10 @@ export function ChatPanel({ ingestorId, ingestorName, onTransformApplied, onShow
   }, [ingestorId]);
 
   async function cargarSugerencias(id: string) {
-    console.log("[ChatPanel] cargarSugerencias llamado con id:", id);
     try {
       const res = await fetch(`/api/suggest/${id}`);
-      console.log("[ChatPanel] /api/suggest status:", res.status);
       if (!res.ok) return;
       const data = await res.json();
-      console.log("[ChatPanel] respuesta suggest:", data);
       const sugs: Sugerencia[] = data.sugerencias ?? [];
       const total: number = data.total_registros ?? 0;
       const rdId: string | null = data.raw_data_id ?? null;
@@ -105,7 +100,6 @@ export function ChatPanel({ ingestorId, ingestorName, onTransformApplied, onShow
           content: `✅ **Transformación aplicada exitosamente.**\n\nTus datos están normalizados y guardados listos para análisis.\n\n¿Quieres explorar algo más?`,
         }]);
         setSugerencias([]);
-        onTransformApplied?.();
       } else {
         setMessages(prev => [...prev, { role: "assistant", content: `❌ Error al transformar: ${data.detail ?? "intenta de nuevo."}` }]);
       }

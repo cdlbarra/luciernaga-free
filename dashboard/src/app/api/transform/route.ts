@@ -23,7 +23,10 @@ export async function POST(req: Request) {
     const records = extractRecords(rawRow.data);
     const transformed = records.map(transformRecord);
 
-    await supabase.from("raw_data").update({ data: transformed }).eq("id", raw_data_id);
+    await supabase
+      .from("transformed_data")
+      .insert({ ingestor_id, raw_data_id, data: transformed });
+
     await supabase.from("pipeline_runs").insert({
       ingestor_id,
       report: { action: "transform", records_processed: transformed.length },
