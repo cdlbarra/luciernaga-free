@@ -30,18 +30,18 @@ export async function GET(
   const { id } = await context.params;
   console.log("[suggest] ingestor_id recibido:", id);
 
-  const { data: rawRecord, error } = await supabase
+  const { data: rows, error } = await supabase
     .from("raw_data")
     .select("id, data")
     .eq("ingestor_id", id)
     .order("created_at", { ascending: false })
-    .limit(1)
-    .single();
+    .limit(1);
 
-  console.log("[suggest] rawRecord:", rawRecord ? { id: rawRecord.id, dataType: typeof rawRecord.data, isArray: Array.isArray(rawRecord.data), length: Array.isArray(rawRecord.data) ? rawRecord.data.length : null } : null);
-  console.log("[suggest] error:", error);
+  console.log("[suggest] rows:", rows, "error:", error);
 
-  if (error || !rawRecord) {
+  const rawRecord = rows?.[0] ?? null;
+
+  if (!rawRecord) {
     return Response.json({ sugerencias: [], total_registros: 0, raw_data_id: null });
   }
 
