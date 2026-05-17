@@ -9,7 +9,7 @@ const supabase = createClient(
 export async function POST(req: Request) {
   try {
     const { ingestor_id, raw_data_id } = await req.json();
-    console.log("[transform] ingestor_id:", ingestor_id, "raw_data_id:", raw_data_id);
+    console.log("[transform] ingestor_id:", ingestor_id, "raw_data_id:", raw_data_id, "typeof raw_data_id:", typeof raw_data_id);
 
     const { data: rows, error: fetchError } = await supabase
       .from("raw_data")
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
       .eq("id", raw_data_id)
       .limit(1);
 
-    console.log("[transform] raw_data fetch — rows:", rows?.length, "error:", fetchError);
+    console.log("[transform] raw_data fetch — rows:", rows?.length, "fetchError.code:", fetchError?.code, "fetchError.message:", fetchError?.message, "fetchError.details:", fetchError?.details);
 
     const rawRow = rows?.[0] ?? null;
     if (fetchError || !rawRow) {
