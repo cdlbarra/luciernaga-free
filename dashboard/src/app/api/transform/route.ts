@@ -30,7 +30,7 @@ export async function POST(req: Request) {
 
     const { error: insertError } = await supabase
       .from("transformed_data")
-      .insert({ ingestor_id, raw_data_id, data: transformed });
+      .insert({ ingestor_id, data: transformed });
 
     console.log("[transform] insert transformed_data error:", insertError);
 
