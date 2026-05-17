@@ -37,12 +37,15 @@ function buildCategoricalData(
 function buildNumericData(
   rows: Record<string, unknown>[],
   xCol: string,
-  yCol: string
+  yCol: string,
+  xIsDate: boolean,
 ): { name: string; value: number }[] {
-  return rows.slice(0, 50).map((row, i) => ({
-    name: String(row[xCol] ?? i + 1),
-    value: Number(row[yCol] ?? 0),
-  }));
+  return rows.slice(0, 50).map((row, i) => {
+    const raw = String(row[xCol] ?? i + 1);
+    // Si el eje X es fecha ISO (YYYY-MM-DD), mostrar solo MM-DD para que quepan los labels
+    const name = xIsDate && /^\d{4}-\d{2}-\d{2}/.test(raw) ? raw.slice(5) : raw;
+    return { name, value: Number(row[yCol] ?? 0) };
+  });
 }
 
 export function TransformedDataPanel({ ingestorId }: { ingestorId: string }) {
@@ -114,14 +117,14 @@ export function TransformedDataPanel({ ingestorId }: { ingestorId: string }) {
         <ChartSection title={`Distribución: ${firstNumCol}`}>
           <ResponsiveContainer width="100%" height={180}>
             {dateCols.length > 0 ? (
-              <LineChart data={buildNumericData(allRows, xAxisCol, firstNumCol)}>
+              <LineChart data={buildNumericData(allRows, xAxisCol, firstNumCol, true)}>
                 <XAxis dataKey="name" tick={{ fill: "#666", fontSize: 10 }} />
                 <YAxis tick={{ fill: "#666", fontSize: 10 }} />
                 <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #3a3a3a", color: "#f0f0f0", fontSize: 12 }} />
                 <Line type="monotone" dataKey="value" stroke="#facc15" dot={false} strokeWidth={2} name={firstNumCol} />
               </LineChart>
             ) : (
-              <BarChart data={buildNumericData(allRows, xAxisCol, firstNumCol)}>
+              <BarChart data={buildNumericData(allRows, xAxisCol, firstNumCol, false)}>
                 <XAxis dataKey="name" tick={{ fill: "#666", fontSize: 10 }} />
                 <YAxis tick={{ fill: "#666", fontSize: 10 }} />
                 <Tooltip contentStyle={{ background: "#1a1a1a", border: "1px solid #3a3a3a", color: "#f0f0f0", fontSize: 12 }} />
