@@ -2,6 +2,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import type { ValidationReport } from "@/lib/dataValidator";
 import { ValidationTable } from "@/components/ValidationTable";
+import { TransformedDataPanel } from "@/components/TransformedDataPanel";
 
 type IngestorData = {
   id: string;
@@ -57,7 +58,7 @@ export function IngestorDetail({ id, onClose }: Props) {
       onClick={onClose}
     >
       <div
-        style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 10, padding: "2rem", width: "100%", maxWidth: 480, color: "#f0f0f0", maxHeight: "85vh", overflowY: "auto" }}
+        style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 10, padding: "2rem", width: "100%", maxWidth: 700, color: "#f0f0f0", maxHeight: "90vh", overflowY: "auto" }}
         onClick={e => e.stopPropagation()}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
@@ -171,6 +172,13 @@ export function IngestorDetail({ id, onClose }: Props) {
               ) : (
                 <p style={{ color: "#4ade80", fontSize: 13, margin: 0 }}>Sin errores detectados</p>
               )}
+            </section>
+
+            <section style={{ marginTop: "1.5rem" }}>
+              <p style={{ color: "#aaa", fontSize: 13, margin: "0 0 0.75rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Datos Transformados
+              </p>
+              <TransformedDataPanel ingestorId={data.id} />
             </section>
           </>
         )}
