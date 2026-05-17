@@ -12,6 +12,9 @@ export default function Home() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
+  const [confirmBatchDelete, setConfirmBatchDelete] = useState(false);
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
+  const [deletingBatch, setDeletingBatch] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => {
@@ -103,6 +106,7 @@ export default function Home() {
             style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 10, padding: "1.5rem", width: "100%", maxWidth: 560, maxHeight: "80vh", overflowY: "auto" }}
             onClick={e => e.stopPropagation()}
           >
+            {/* Header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
               <h2 style={{ margin: 0, color: "#facc15", fontSize: 18 }}>
                 Mis ingestiones
@@ -125,50 +129,89 @@ export default function Home() {
                 No hay ingestores registrados aún.
               </p>
             ) : (
-              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                {ingestors.map((ing: any) => (
-                  <li
-                    key={ing.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "0.6rem 0.75rem",
-                      background: ing.id === selectedId ? "#1e1e00" : "#111",
-                      marginBottom: 6,
-                      borderRadius: 6,
-                      border: `1px solid ${ing.id === selectedId ? "#facc15" : "#2a2a2a"}`,
-                    }}
-                  >
-                    <div
-                      style={{ flex: 1, cursor: "pointer" }}
-                      onClick={() => {
-                        setSelectedId(ing.id === selectedId ? null : ing.id);
-                        setShowListModal(false);
+              <>
+                {/* Subheader: seleccionar todos + botón eliminar seleccionados */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem", padding: "0 0.25rem" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: "#aaa", fontSize: 13 }}>
+                    <input
+                      type="checkbox"
+                      checked={checkedIds.size === ingestors.length && ingestors.length > 0}
+                      onChange={e => {
+                        if (e.target.checked) setCheckedIds(new Set(ingestors.map(i => i.id)));
+                        else setCheckedIds(new Set());
+                      }}
+                      style={{ width: 15, height: 15, cursor: "pointer", accentColor: "#facc15" }}
+                    />
+                    Seleccionar todos
+                  </label>
+                  {checkedIds.size > 0 && (
+                    <button
+                      onClick={() => setConfirmBatchDelete(true)}
+                      style={{ padding: "0.3rem 0.85rem", borderRadius: 5, border: "none", background: "#ef4444", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: "bold" }}
+                    >
+                      Eliminar seleccionados ({checkedIds.size})
+                    </button>
+                  )}
+                </div>
+
+                <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                  {ingestors.map((ing: any) => (
+                    <li
+                      key={ing.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "0.6rem 0.75rem",
+                        background: ing.id === selectedId ? "#1e1e00" : checkedIds.has(ing.id) ? "#1a1a0a" : "#111",
+                        marginBottom: 6,
+                        borderRadius: 6,
+                        border: `1px solid ${ing.id === selectedId ? "#facc15" : checkedIds.has(ing.id) ? "#5a5a00" : "#2a2a2a"}`,
                       }}
                     >
-                      <div style={{ color: "#f0f0f0", fontWeight: 600, fontSize: 14 }}>{ing.name}</div>
-                      <div style={{ color: "#666", fontSize: 12, marginTop: 2 }}>
-                        {ing.source_type} · {ing.status}
+                      <input
+                        type="checkbox"
+                        checked={checkedIds.has(ing.id)}
+                        onChange={e => {
+                          setCheckedIds(prev => {
+                            const next = new Set(prev);
+                            if (e.target.checked) next.add(ing.id);
+                            else next.delete(ing.id);
+                            return next;
+                          });
+                        }}
+                        style={{ width: 15, height: 15, cursor: "pointer", accentColor: "#facc15", flexShrink: 0 }}
+                      />
+                      <div
+                        style={{ flex: 1, cursor: "pointer", minWidth: 0 }}
+                        onClick={() => {
+                          setSelectedId(ing.id === selectedId ? null : ing.id);
+                          setShowListModal(false);
+                        }}
+                      >
+                        <div style={{ color: "#f0f0f0", fontWeight: 600, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ing.name}</div>
+                        <div style={{ color: "#666", fontSize: 12, marginTop: 2 }}>
+                          {ing.source_type} · {ing.status}
+                        </div>
                       </div>
-                    </div>
-                    <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                      <button
-                        onClick={() => { setDetailId(ing.id); setShowListModal(false); }}
-                        style={{ background: "transparent", color: "#aaa", border: "1px solid #3a3a3a", padding: "0.3rem 0.65rem", borderRadius: 5, cursor: "pointer", fontSize: 12 }}
-                      >
-                        Detalle
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setConfirmDelete({ id: ing.id, name: ing.name }); }}
-                        style={{ background: "#ef4444", color: "#fff", border: "none", padding: "0.3rem 0.65rem", borderRadius: 5, cursor: "pointer", fontSize: 12, fontWeight: "bold" }}
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+                      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                        <button
+                          onClick={() => { setDetailId(ing.id); setShowListModal(false); }}
+                          style={{ background: "transparent", color: "#aaa", border: "1px solid #3a3a3a", padding: "0.3rem 0.65rem", borderRadius: 5, cursor: "pointer", fontSize: 12 }}
+                        >
+                          Detalle
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setConfirmDelete({ id: ing.id, name: ing.name }); }}
+                          style={{ background: "#ef4444", color: "#fff", border: "none", padding: "0.3rem 0.65rem", borderRadius: 5, cursor: "pointer", fontSize: 12, fontWeight: "bold" }}
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
           </div>
         </div>
@@ -205,6 +248,7 @@ export default function Home() {
                   const res = await fetch(`/api/publish?id=${confirmDelete.id}`, { method: "DELETE" });
                   if (res.ok) {
                     setIngestors(prev => prev.filter(i => i.id !== confirmDelete.id));
+                    setCheckedIds(prev => { const next = new Set(prev); next.delete(confirmDelete.id); return next; });
                     if (selectedId === confirmDelete.id) setSelectedId(null);
                   }
                   setConfirmDelete(null);
@@ -212,6 +256,63 @@ export default function Home() {
                 style={{ padding: "0.5rem 1.1rem", borderRadius: 6, border: "none", background: "#ef4444", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: "bold" }}
               >
                 Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: CONFIRMAR ELIMINACIÓN BATCH ── */}
+      {confirmBatchDelete && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 70 }}
+          onClick={() => setConfirmBatchDelete(false)}
+        >
+          <div
+            style={{ background: "#1a1a1a", border: "1px solid #3a3a3a", borderRadius: 10, padding: "1.75rem", width: "100%", maxWidth: 400 }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 style={{ margin: "0 0 0.75rem", color: "#f0f0f0", fontSize: 16 }}>
+              ¿Eliminar {checkedIds.size} ingestor{checkedIds.size !== 1 ? "es" : ""}?
+            </h3>
+            <p style={{ margin: "0 0 1.5rem", color: "#aaa", fontSize: 14, lineHeight: 1.6 }}>
+              Se eliminarán {checkedIds.size} ingestor{checkedIds.size !== 1 ? "es" : ""} y todos sus datos asociados. Esta acción no se puede deshacer.
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setConfirmBatchDelete(false)}
+                disabled={deletingBatch}
+                style={{ padding: "0.5rem 1.1rem", borderRadius: 6, border: "1px solid #444", background: "transparent", color: "#f0f0f0", cursor: "pointer", fontSize: 13 }}
+              >
+                Cancelar
+              </button>
+              <button
+                disabled={deletingBatch}
+                onClick={async () => {
+                  setDeletingBatch(true);
+                  try {
+                    const ids = Array.from(checkedIds);
+                    const res = await fetch("/api/ingestors/batch", {
+                      method: "DELETE",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ ids }),
+                    });
+                    if (res.ok) {
+                      setIngestors(prev => prev.filter(i => !checkedIds.has(i.id)));
+                      if (selectedId && checkedIds.has(selectedId)) setSelectedId(null);
+                      setCheckedIds(new Set());
+                      setStatus(`✓ ${ids.length} ingestor${ids.length !== 1 ? "es" : ""} eliminado${ids.length !== 1 ? "s" : ""}`);
+                    } else {
+                      setStatus("✗ Error al eliminar los ingestores");
+                    }
+                  } finally {
+                    setDeletingBatch(false);
+                    setConfirmBatchDelete(false);
+                  }
+                }}
+                style={{ padding: "0.5rem 1.1rem", borderRadius: 6, border: "none", background: deletingBatch ? "#7f1d1d" : "#ef4444", color: "#fff", cursor: deletingBatch ? "default" : "pointer", fontSize: 13, fontWeight: "bold" }}
+              >
+                {deletingBatch ? "Eliminando…" : "Eliminar"}
               </button>
             </div>
           </div>
