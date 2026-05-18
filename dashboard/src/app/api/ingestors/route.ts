@@ -16,16 +16,19 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { name, description, source_type } = await req.json();
+  const { name, source_type } = await req.json();
 
   if (!name?.trim()) {
     return Response.json({ error: "name es requerido" }, { status: 400 });
   }
 
+  const contract = { name: name.trim(), source_type: source_type ?? "csv", config: {} };
+
   const { data, error } = await supabase
     .from("ingestors")
     .insert({
       name: name.trim(),
+      contract,
       status: "inactive",
     })
     .select()
