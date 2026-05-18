@@ -8,7 +8,7 @@ const supabase = createClient(
 export async function GET() {
   const { data, error } = await supabase
     .from("ingestors")
-    .select("id, name, description, source_type, status, created_at, updated_at")
+    .select("id, name, source_type, status, created_at, updated_at")
     .order("created_at", { ascending: false });
 
   if (error) return Response.json({ error }, { status: 500 });
@@ -26,7 +26,6 @@ export async function POST(req: Request) {
     .from("ingestors")
     .insert({
       name: name.trim(),
-      description: description?.trim() ?? "",
       source_type: source_type ?? "csv",
       status: "inactive",
     })
