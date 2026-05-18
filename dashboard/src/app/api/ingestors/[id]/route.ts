@@ -75,3 +75,10 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
     validation_status: rawRec?.validation_status ?? null,
   });
 }
+
+export async function DELETE(_req: Request, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params;
+  const { error } = await supabase.from("ingestors").delete().eq("id", id);
+  if (error) return Response.json({ error }, { status: 500 });
+  return new Response(null, { status: 204 });
+}
