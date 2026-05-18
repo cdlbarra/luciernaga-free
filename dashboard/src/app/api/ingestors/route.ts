@@ -26,7 +26,6 @@ export async function POST(req: Request) {
     .from("ingestors")
     .insert({
       name: name.trim(),
-      source_type: source_type ?? "csv",
       status: "inactive",
     })
     .select()
