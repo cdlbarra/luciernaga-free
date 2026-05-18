@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import * as XLSX from "xlsx";
 import { generarReportValidacion } from "@/lib/dataValidator";
+import { extractRecords, transformRecord } from "@/lib/transformer";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -24,6 +25,46 @@ async function parseFile(file: File): Promise<{ rows: Record<string, unknown>[];
   return { rows, sourceType };
 }
 
+async function saveAndTransform(
+  ingestorId: string,
+  rows: Record<string, unknown>[],
+  uploadedBy: string,
+) {
+  const validationReport = generarReportValidacion(rows);
+  const validationStatus = validationReport.resumen.tiene_errores
+    ? "errors"
+    : validationReport.resumen.tiene_advertencias
+      ? "warnings"
+      : "valid";
+
+  const { data: rawInsert, error: rawError } = await supabase
+    .from("raw_data")
+    .insert({
+      ingestor_id: ingestorId,
+      data: rows,
+      uploaded_by: uploadedBy,
+      company: "default",
+      data_type: "raw",
+      uploaded_at: new Date().toISOString(),
+      validation_report: validationReport,
+      validation_status: validationStatus,
+    })
+    .select("id")
+    .single();
+
+  if (rawError) return { error: rawError.message };
+
+  const transformed = extractRecords(rows).map(transformRecord);
+
+  const { error: transformError } = await supabase
+    .from("transformed_data")
+    .insert({ ingestor_id: ingestorId, raw_data_id: rawInsert.id, data: transformed });
+
+  if (transformError) return { error: transformError.message };
+
+  return { rowsProcessed: transformed.length };
+}
+
 export async function POST(req: Request) {
   try {
     const contentType = req.headers.get("content-type") ?? "";
@@ -40,84 +81,29 @@ export async function POST(req: Request) {
         return Response.json({ success: false, message: "file es requerido" }, { status: 400 });
       }
 
-      const { rows, sourceType } = await parseFile(file);
-      const validationReport = generarReportValidacion(rows);
-      const validationStatus = validationReport.resumen.tiene_errores
-        ? "errors"
-        : validationReport.resumen.tiene_advertencias
-          ? "warnings"
-          : "valid";
+      const { rows } = await parseFile(file);
+      const result = await saveAndTransform(
+        ingestorId,
+        rows,
+        req.headers.get("x-user-id") ?? "anonymous",
+      );
 
-      const { error: rawError } = await supabase.from("raw_data").insert({
-        ingestor_id: ingestorId,
-        data: rows,
-        uploaded_by: req.headers.get("x-user-id") ?? "anonymous",
-        company: req.headers.get("x-company") ?? "default",
-        data_type: "raw",
-        uploaded_at: new Date().toISOString(),
-        validation_report: validationReport,
-        validation_status: validationStatus,
-      });
-
-      if (rawError) {
-        return Response.json({ success: false, message: rawError.message }, { status: 500 });
+      if (result.error) {
+        return Response.json({ success: false, message: result.error }, { status: 500 });
       }
-
-      if (process.env.INGESTOR_URL) {
-        try {
-          await fetch(`${process.env.INGESTOR_URL}/ingest`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ source: { rows, source_type: sourceType }, ingestor_id: ingestorId }),
-          });
-        } catch {
-          // best-effort
-        }
-      }
-
-      return Response.json({ success: true, message: "Archivo procesado", rowsProcessed: rows.length });
+      return Response.json({ success: true, message: "Archivo procesado", rowsProcessed: result.rowsProcessed });
     }
 
-    // Legacy JSON path: { source: { data: [], source_type }, ingestor_id }
+    // JSON path: { source: { data: [], source_type }, ingestor_id }
     const { source, ingestor_id } = await req.json();
     const rows: Record<string, unknown>[] = Array.isArray(source?.data) ? source.data : [];
-    const sourceType: string = source?.source_type ?? "csv";
 
-    const validationReport = generarReportValidacion(rows);
-    const validationStatus = validationReport.resumen.tiene_errores
-      ? "errors"
-      : validationReport.resumen.tiene_advertencias
-        ? "warnings"
-        : "valid";
+    const result = await saveAndTransform(ingestor_id, rows, "android");
 
-    const { error: rawError } = await supabase.from("raw_data").insert({
-      ingestor_id,
-      data: rows,
-      uploaded_by: "android-mock",
-      company: "default",
-      data_type: "raw",
-      uploaded_at: new Date().toISOString(),
-      validation_report: validationReport,
-      validation_status: validationStatus,
-    });
-
-    if (rawError) {
-      return Response.json({ success: false, message: rawError.message }, { status: 500 });
+    if (result.error) {
+      return Response.json({ success: false, message: result.error }, { status: 500 });
     }
-
-    if (process.env.INGESTOR_URL) {
-      try {
-        await fetch(`${process.env.INGESTOR_URL}/ingest`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ source: { rows, source_type: sourceType }, ingestor_id }),
-        });
-      } catch {
-        // best-effort
-      }
-    }
-
-    return Response.json({ success: true, message: "Datos mock procesados", rowsProcessed: rows.length });
+    return Response.json({ success: true, message: "Datos procesados", rowsProcessed: result.rowsProcessed });
   } catch (e) {
     return Response.json({ success: false, message: String(e) }, { status: 500 });
   }
