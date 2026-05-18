@@ -78,14 +78,46 @@ export async function POST(req: Request) {
       return Response.json({ success: true, message: "Archivo procesado", rowsProcessed: rows.length });
     }
 
-    // Legacy JSON path
+    // Legacy JSON path: { source: { data: [], source_type }, ingestor_id }
     const { source, ingestor_id } = await req.json();
-    const recordCount = Array.isArray(source?.data) ? source.data.length : 0;
-    const report = { source_type: source?.source_type ?? "unknown", records: recordCount, status: "ok" };
+    const rows: Record<string, unknown>[] = Array.isArray(source?.data) ? source.data : [];
+    const sourceType: string = source?.source_type ?? "csv";
 
-    await supabase.from("pipeline_runs").insert({ ingestor_id, report, quality_score: 80 });
+    const validationReport = generarReportValidacion(rows);
+    const validationStatus = validationReport.resumen.tiene_errores
+      ? "errors"
+      : validationReport.resumen.tiene_advertencias
+        ? "warnings"
+        : "valid";
 
-    return Response.json({ success: true, message: "ok", rowsProcessed: recordCount });
+    const { error: rawError } = await supabase.from("raw_data").insert({
+      ingestor_id,
+      data: rows,
+      uploaded_by: "android-mock",
+      company: "default",
+      data_type: "raw",
+      uploaded_at: new Date().toISOString(),
+      validation_report: validationReport,
+      validation_status: validationStatus,
+    });
+
+    if (rawError) {
+      return Response.json({ success: false, message: rawError.message }, { status: 500 });
+    }
+
+    if (process.env.INGESTOR_URL) {
+      try {
+        await fetch(`${process.env.INGESTOR_URL}/ingest`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ source: { rows, source_type: sourceType }, ingestor_id }),
+        });
+      } catch {
+        // best-effort
+      }
+    }
+
+    return Response.json({ success: true, message: "Datos mock procesados", rowsProcessed: rows.length });
   } catch (e) {
     return Response.json({ success: false, message: String(e) }, { status: 500 });
   }
