@@ -18,9 +18,9 @@ async function parseFile(file: File): Promise<{ rows: Record<string, unknown>[];
     return { rows, sourceType: "json" };
   }
 
-  const wb = XLSX.read(buffer, { type: "buffer" });
+  const wb = XLSX.read(buffer, { type: "buffer", codepage: 65001 });
   const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws);
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { raw: false, defval: "" });
   const sourceType = name.endsWith(".csv") ? "csv" : "excel";
   return { rows, sourceType };
 }
