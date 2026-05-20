@@ -71,8 +71,9 @@ export async function POST(req: Request) {
     const contentType = req.headers.get("content-type") ?? "";
 
     if (contentType.includes("multipart/form-data")) {
+      const { searchParams } = new URL(req.url);
       const form = await req.formData();
-      const ingestorId = form.get("ingestor_id") as string | null;
+      const ingestorId = (searchParams.get("ingestor_id") || form.get("ingestor_id")) as string | null;
       const file = form.get("file") as File | null;
 
       if (!ingestorId) {
