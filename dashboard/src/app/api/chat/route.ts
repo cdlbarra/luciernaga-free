@@ -4,6 +4,7 @@ type Context = {
   ingestor_name?: string;
   total_registros?: number;
   sugerencias?: Sugerencia[];
+  data_preview?: string;
 };
 
 async function guardarEnSupabase(rol: string, contenido: string) {
@@ -47,6 +48,10 @@ Siempre responde EN ESPAÑOL, corto y directo (máx 3-4 líneas por mensaje).`;
     if (context.total_registros != null) {
       prompt += ` (${context.total_registros.toLocaleString("es-CL")} registros)`;
     }
+  }
+
+  if (context?.data_preview) {
+    prompt += `\n\nEl usuario tiene los siguientes datos disponibles:\n${context.data_preview}`;
   }
 
   if (context?.sugerencias?.length) {
