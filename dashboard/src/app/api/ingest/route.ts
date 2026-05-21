@@ -81,13 +81,14 @@ async function saveAndTransform(
     return { error: transformError.message };
   }
 
-  await supabase.from("pipeline_runs").insert({
+  const runInsert = await supabase.from("pipeline_runs").insert({
     ingestor_id: ingestorId,
     status: "success",
     rows_processed: transformed.length,
     error_message: null,
     created_at: new Date().toISOString(),
   });
+  console.log('PIPELINE RUN INSERT:', JSON.stringify(runInsert));
 
   return { rowsProcessed: transformed.length };
 }
