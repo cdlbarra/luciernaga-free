@@ -29,12 +29,41 @@ export function ChatPanel({ ingestorId, ingestorName, onShowIngestors, ingestors
   const [totalRegistros, setTotalRegistros] = useState<number | null>(null);
   const [rawDataId, setRawDataId] = useState<string | null>(null);
   const [transformando, setTransformando] = useState(false);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const chipsContainerRef = useRef<HTMLDivElement>(null);
   const prevIngestorIdRef = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, cargando]);
+
+  const updateArrowVisibility = () => {
+    if (!chipsContainerRef.current) return;
+    const el = chipsContainerRef.current;
+    setShowLeftArrow(el.scrollLeft > 0);
+    setShowRightArrow(el.scrollLeft + el.clientWidth < el.scrollWidth);
+  };
+
+  const scrollChips = (direction: "left" | "right") => {
+    if (!chipsContainerRef.current) return;
+    const scrollAmount = direction === "left" ? -150 : 150;
+    chipsContainerRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    updateArrowVisibility();
+    const container = chipsContainerRef.current;
+    if (container) {
+      container.addEventListener("scroll", updateArrowVisibility);
+      window.addEventListener("resize", updateArrowVisibility);
+      return () => {
+        container.removeEventListener("scroll", updateArrowVisibility);
+        window.removeEventListener("resize", updateArrowVisibility);
+      };
+    }
+  }, [ingestors]);
 
   useEffect(() => {
     if (prevIngestorIdRef.current === ingestorId) return;
@@ -180,49 +209,48 @@ export function ChatPanel({ ingestorId, ingestorName, onShowIngestors, ingestors
       </div>
 
       {/* Selector de Ingestores */}
-      <div style={{ padding: "0.5rem 1rem", borderBottom: "1px solid #2a2a2a", background: "#161616", flexShrink: 0, overflowX: "auto", overflowY: "hidden", scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
-        <div style={{ display: "flex", gap: "6px", minWidth: "fit-content" }}>
-          {/* Chip General */}
+      <div style={{ display: "flex", alignItems: "center", borderBottom: "1px solid #2a2a2a", background: "#161616", flexShrink: 0 }}>
+        {/* Flecha Izquierda */}
+        {showLeftArrow && (
           <button
-            onClick={() => onSelectIngestor?.(null)}
+            onClick={() => scrollChips("left")}
             style={{
-              border: ingestorId === null ? "none" : "1px solid #facc15",
-              color: ingestorId === null ? "#000" : "#facc15",
-              background: ingestorId === null ? "#facc15" : "transparent",
-              borderRadius: 20,
-              padding: "6px 12px",
-              fontSize: 12,
-              fontWeight: 600,
+              color: "#facc15",
+              background: "transparent",
+              border: "none",
+              fontSize: 18,
               cursor: "pointer",
-              whiteSpace: "nowrap",
+              padding: "0.5rem 0.25rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               flexShrink: 0,
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              if (ingestorId !== null) {
-                e.currentTarget.style.borderColor = "#facc15";
-                e.currentTarget.style.color = "#facc15";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (ingestorId !== null) {
-                e.currentTarget.style.borderColor = "#facc15";
-                e.currentTarget.style.color = "#facc15";
-              }
             }}
           >
-            General
+            &lt;
           </button>
+        )}
 
-          {/* Chips de Ingestores */}
-          {ingestors.map((ing) => (
+        {/* Contenedor de Chips Scrollable */}
+        <div
+          ref={chipsContainerRef}
+          style={{
+            padding: "0.5rem 1rem",
+            overflowX: "auto",
+            overflowY: "hidden",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+            flex: 1,
+          } as React.CSSProperties}
+        >
+          <div style={{ display: "flex", gap: "6px", minWidth: "fit-content" }}>
+            {/* Chip General */}
             <button
-              key={ing.id}
-              onClick={() => onSelectIngestor?.(ing.id)}
+              onClick={() => onSelectIngestor?.(null)}
               style={{
-                border: ingestorId === ing.id ? "none" : "1px solid #facc15",
-                color: ingestorId === ing.id ? "#000" : "#facc15",
-                background: ingestorId === ing.id ? "#facc15" : "transparent",
+                border: ingestorId === null ? "none" : "1px solid #facc15",
+                color: ingestorId === null ? "#000" : "#facc15",
+                background: ingestorId === null ? "#facc15" : "transparent",
                 borderRadius: 20,
                 padding: "6px 12px",
                 fontSize: 12,
@@ -233,23 +261,79 @@ export function ChatPanel({ ingestorId, ingestorName, onShowIngestors, ingestors
                 transition: "all 0.2s",
               }}
               onMouseEnter={(e) => {
-                if (ingestorId !== ing.id) {
+                if (ingestorId !== null) {
                   e.currentTarget.style.borderColor = "#facc15";
                   e.currentTarget.style.color = "#facc15";
                 }
               }}
               onMouseLeave={(e) => {
-                if (ingestorId !== ing.id) {
+                if (ingestorId !== null) {
                   e.currentTarget.style.borderColor = "#facc15";
                   e.currentTarget.style.color = "#facc15";
                 }
               }}
-              title={ing.name}
             >
-              {ing.name.length > 15 ? ing.name.substring(0, 12) + "…" : ing.name}
+              General
             </button>
-          ))}
+
+            {/* Chips de Ingestores */}
+            {ingestors.map((ing) => (
+              <button
+                key={ing.id}
+                onClick={() => onSelectIngestor?.(ing.id)}
+                style={{
+                  border: ingestorId === ing.id ? "none" : "1px solid #facc15",
+                  color: ingestorId === ing.id ? "#000" : "#facc15",
+                  background: ingestorId === ing.id ? "#facc15" : "transparent",
+                  borderRadius: 20,
+                  padding: "6px 12px",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  if (ingestorId !== ing.id) {
+                    e.currentTarget.style.borderColor = "#facc15";
+                    e.currentTarget.style.color = "#facc15";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (ingestorId !== ing.id) {
+                    e.currentTarget.style.borderColor = "#facc15";
+                    e.currentTarget.style.color = "#facc15";
+                  }
+                }}
+                title={ing.name}
+              >
+                {ing.name.length > 15 ? ing.name.substring(0, 12) + "…" : ing.name}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Flecha Derecha */}
+        {showRightArrow && (
+          <button
+            onClick={() => scrollChips("right")}
+            style={{
+              color: "#facc15",
+              background: "transparent",
+              border: "none",
+              fontSize: 18,
+              cursor: "pointer",
+              padding: "0.5rem 0.25rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            &gt;
+          </button>
+        )}
       </div>
 
       {/* Mensajes */}
