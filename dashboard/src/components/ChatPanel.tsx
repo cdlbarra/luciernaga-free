@@ -109,9 +109,14 @@ export function ChatPanel({ ingestorId, ingestorName, onShowIngestors }: Props) 
     setTransformando(false);
   }
 
-  async function enviarMensaje(e: React.FormEvent) {
+  async function enviarMensaje(texto?: string): Promise<void> {
+    const e = { preventDefault: () => {} } as React.FormEvent;
+    return enviarMensajeInterno(texto, e);
+  }
+
+  async function enviarMensajeInterno(textoOverride: string | undefined, e: React.FormEvent) {
     e.preventDefault();
-    const texto = input.trim();
+    const texto = (textoOverride || input).trim();
     if (!texto || cargando) return;
 
     const userMsg: Msg = { role: "user", content: texto };
@@ -175,11 +180,57 @@ export function ChatPanel({ ingestorId, ingestorName, onShowIngestors }: Props) 
       {/* Mensajes */}
       <div style={{ flex: 1, overflowY: "auto", padding: "1rem", display: "flex", flexDirection: "column", gap: 10 }}>
         {messages.length === 0 && (
-          <p style={{ color: "#3a3a3a", fontSize: 13, textAlign: "center", marginTop: "3rem", lineHeight: 1.6 }}>
-            {ingestorId
-              ? "Analizando datos…"
-              : "Selecciona un ingestor para\nanálisis automático, o escribe\nuna pregunta sobre tus datos."}
-          </p>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, gap: "16px", padding: "16px" }}>
+            <span style={{ fontSize: 48, lineHeight: 1 }}>✨</span>
+            <p style={{ color: "#ffffff", fontWeight: "bold", fontSize: 18, margin: 0, textAlign: "center" }}>
+              ¡Hola! Soy tu asistente de datos
+            </p>
+            <p style={{ color: "#888", fontSize: 14, margin: 0, textAlign: "center" }}>
+              Selecciona un ingestor y hazme preguntas sobre tus datos
+            </p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "center" }}>
+              {(ingestorId
+                ? [
+                    "¿Cuántos registros tiene este archivo?",
+                    "¿Qué columnas tiene?",
+                    "Dame un resumen de los datos",
+                    "¿Hay valores vacíos o errores?",
+                  ]
+                : [
+                    "¿Qué puedo hacer con esta app?",
+                    "¿Cómo cargo un archivo?",
+                    "¿Qué tipos de archivo acepta?",
+                    "¿Cómo analizo mis datos?",
+                  ]
+              ).map((sugerencia) => (
+                <button
+                  key={sugerencia}
+                  onClick={() => enviarMensaje(sugerencia)}
+                  style={{
+                    border: "1px solid #facc15",
+                    color: "#facc15",
+                    borderRadius: 20,
+                    padding: "8px 14px",
+                    fontSize: 13,
+                    background: "transparent",
+                    cursor: "pointer",
+                    fontWeight: 500,
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#facc15";
+                    e.currentTarget.style.color = "#000";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "transparent";
+                    e.currentTarget.style.color = "#facc15";
+                  }}
+                >
+                  {sugerencia}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
 
         {messages.map((m, i) => (
@@ -266,7 +317,7 @@ export function ChatPanel({ ingestorId, ingestorName, onShowIngestors }: Props) 
 
       {/* Input */}
       <form
-        onSubmit={enviarMensaje}
+        onSubmit={(e) => enviarMensajeInterno(undefined, e)}
         style={{ padding: "0.75rem 1rem", borderTop: "1px solid #2a2a2a", display: "flex", gap: 8, background: "#161616", flexShrink: 0 }}
       >
         <input
