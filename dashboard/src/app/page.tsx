@@ -81,6 +81,8 @@ export default function Home() {
           ingestorId={selectedId}
           ingestorName={selectedIngestor?.name}
           onShowIngestors={() => setShowListModal(v => !v)}
+          ingestors={ingestors}
+          onSelectIngestor={setSelectedId}
         />
       </aside>
 

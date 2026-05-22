@@ -10,6 +10,8 @@ interface Props {
   ingestorId?: string | null;
   ingestorName?: string;
   onShowIngestors?: () => void;
+  ingestors?: Array<{ id: string; name: string }>;
+  onSelectIngestor?: (id: string | null) => void;
 }
 
 const iconPorTipo: Record<string, string> = {
@@ -19,7 +21,7 @@ const iconPorTipo: Record<string, string> = {
   info: "ℹ️",
 };
 
-export function ChatPanel({ ingestorId, ingestorName, onShowIngestors }: Props) {
+export function ChatPanel({ ingestorId, ingestorName, onShowIngestors, ingestors = [], onSelectIngestor }: Props) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [cargando, setCargando] = useState(false);
@@ -175,6 +177,79 @@ export function ChatPanel({ ingestorId, ingestorName, onShowIngestors }: Props) 
             {totalRegistros != null && ` · ${totalRegistros.toLocaleString("es-CL")} registros`}
           </div>
         )}
+      </div>
+
+      {/* Selector de Ingestores */}
+      <div style={{ padding: "0.5rem 1rem", borderBottom: "1px solid #2a2a2a", background: "#161616", flexShrink: 0, overflowX: "auto", overflowY: "hidden" }}>
+        <div style={{ display: "flex", gap: "6px", minWidth: "fit-content" }}>
+          {/* Chip General */}
+          <button
+            onClick={() => onSelectIngestor?.(null)}
+            style={{
+              border: ingestorId === null ? "none" : "1px solid #facc15",
+              color: ingestorId === null ? "#000" : "#facc15",
+              background: ingestorId === null ? "#facc15" : "transparent",
+              borderRadius: 20,
+              padding: "6px 12px",
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              if (ingestorId !== null) {
+                e.currentTarget.style.borderColor = "#facc15";
+                e.currentTarget.style.color = "#facc15";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (ingestorId !== null) {
+                e.currentTarget.style.borderColor = "#facc15";
+                e.currentTarget.style.color = "#facc15";
+              }
+            }}
+          >
+            General
+          </button>
+
+          {/* Chips de Ingestores */}
+          {ingestors.map((ing) => (
+            <button
+              key={ing.id}
+              onClick={() => onSelectIngestor?.(ing.id)}
+              style={{
+                border: ingestorId === ing.id ? "none" : "1px solid #facc15",
+                color: ingestorId === ing.id ? "#000" : "#facc15",
+                background: ingestorId === ing.id ? "#facc15" : "transparent",
+                borderRadius: 20,
+                padding: "6px 12px",
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+                transition: "all 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                if (ingestorId !== ing.id) {
+                  e.currentTarget.style.borderColor = "#facc15";
+                  e.currentTarget.style.color = "#facc15";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (ingestorId !== ing.id) {
+                  e.currentTarget.style.borderColor = "#facc15";
+                  e.currentTarget.style.color = "#facc15";
+                }
+              }}
+              title={ing.name}
+            >
+              {ing.name.length > 15 ? ing.name.substring(0, 12) + "…" : ing.name}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Mensajes */}
