@@ -180,7 +180,7 @@ export function ChatPanel({ ingestorId, ingestorName, onShowIngestors, ingestors
       </div>
 
       {/* Selector de Ingestores */}
-      <div style={{ padding: "0.5rem 1rem", borderBottom: "1px solid #2a2a2a", background: "#161616", flexShrink: 0, overflowX: "auto", overflowY: "hidden" }}>
+      <div style={{ padding: "0.5rem 1rem", borderBottom: "1px solid #2a2a2a", background: "#161616", flexShrink: 0, overflowX: "auto", overflowY: "hidden", scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
         <div style={{ display: "flex", gap: "6px", minWidth: "fit-content" }}>
           {/* Chip General */}
           <button
