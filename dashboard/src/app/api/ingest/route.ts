@@ -81,14 +81,19 @@ async function saveAndTransform(
     return { error: transformError.message };
   }
 
-  const runInsert = await supabase.from("pipeline_runs").insert({
+  const { error: runError } = await supabase.from("pipeline_runs").insert({
     ingestor_id: ingestorId,
     status: "success",
     rows_processed: transformed.length,
     error_message: null,
     created_at: new Date().toISOString(),
   });
-  console.log('PIPELINE RUN INSERT:', JSON.stringify(runInsert));
+
+  if (runError) {
+    console.error('PIPELINE RUN ERROR:', JSON.stringify(runError));
+  } else {
+    console.log('PIPELINE RUN OK: guardado correctamente');
+  }
 
   return { rowsProcessed: transformed.length };
 }
