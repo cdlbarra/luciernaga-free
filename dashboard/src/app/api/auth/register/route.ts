@@ -20,10 +20,9 @@ export async function POST(req: Request) {
 
   const userId = authData.user.id;
 
-  // 2. Crear empresa con el email como nombre
   const { data: company, error: companyError } = await supabase
     .from("companies")
-    .insert({ name: email })
+    .insert({ name: name || null })
     .select("id")
     .single();
   if (companyError) return Response.json({ error: companyError.message }, { status: 500 });
