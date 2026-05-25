@@ -9,6 +9,7 @@ type IngestorData = {
   name: string;
   source_type: string;
   status: string;
+  company_id: string;
   created_at: string;
   quality_score: number | null;
   columns: string[];

@@ -7,6 +7,7 @@ import { ValidationTable } from "@/components/ValidationTable";
 type Props = {
   onClose: () => void;
   onSuccess: (data: Record<string, unknown>) => void;
+  companyId: string;
 };
 
 const inputStyle: CSSProperties = {
@@ -21,7 +22,7 @@ const inputStyle: CSSProperties = {
   fontSize: 14,
 };
 
-export function IngestorModal({ onClose, onSuccess }: Props) {
+export function IngestorModal({ onClose, onSuccess, companyId }: Props) {
   const [name, setName] = useState("");
   const [sourceType, setSourceType] = useState("json");
   const [file, setFile] = useState<File | null>(null);
@@ -66,7 +67,7 @@ export function IngestorModal({ onClose, onSuccess }: Props) {
       formData.append("name", name.trim());
       formData.append("source_type", sourceType);
       formData.append("file", file);
-      const res = await fetch("/api/publish", { method: "POST", body: formData });
+      const res = await fetch("/api/publish", { method: "POST", body: formData, headers: { "x-company-id": companyId } });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Error desconocido");
       onSuccess(data);
@@ -118,7 +119,14 @@ export function IngestorModal({ onClose, onSuccess }: Props) {
               style={{ ...inputStyle, paddingTop: "0.4rem" }}
               type="file"
               accept=".json,.csv,.xlsx,.xls"
-              onChange={e => setFile(e.target.files?.[0] ?? null)}
+              onChange={e => {
+                const f = e.target.files?.[0] ?? null;
+                setFile(f);
+                if (f && (!name.trim() || name === "mi-ingestor")) {
+                  const baseName = f.name.replace(/\.[^.]+$/, "").toLowerCase().replace(/[\s.]+/g, "-");
+                  setName(baseName);
+                }
+              }}
             />
           </label>
           {validating && (

@@ -57,7 +57,7 @@ export async function POST(req: Request) {
 
   const { data, error } = await supabase
     .from("ingestors")
-    .insert({ name, contract: contrato, status: "active" })
+    .insert({ name, contract: contrato, status: "active", company_id: req.headers.get("x-company-id") ?? "" })
     .select()
     .single();
 
@@ -79,6 +79,7 @@ export async function POST(req: Request) {
       .from("raw_data")
       .insert({
         ingestor_id: data.id,
+        company_id: req.headers.get("x-company-id") ?? "",
         data: fileData,
         uploaded_by: req.headers.get("x-user-id") ?? "anonymous",
         company: req.headers.get("x-company") ?? "default",
@@ -88,9 +89,6 @@ export async function POST(req: Request) {
         validation_status: validationStatus,
       });
 
-    if (rawDataInsert.error) {
-      console.error("Error saving raw_data:", rawDataInsert.error);
-    }
   }
 
   if (fileData && process.env.INGESTOR_URL) {

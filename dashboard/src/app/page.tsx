@@ -1,11 +1,28 @@
 "use client";
 import { useState, useEffect } from "react";
+import type { Session } from "@supabase/supabase-js";
+import { createSupabaseBrowser } from "@/lib/supabase-browser";
 
 import { IngestorModal } from "@/components/IngestorModal";
 import { IngestorDetail } from "@/components/IngestorDetail";
 import { ChatPanel } from "@/components/ChatPanel";
 
+const supabase = createSupabaseBrowser();
+
 export default function Home() {
+  // ── Auth ──
+  const [session, setSession] = useState<Session | null>(null);
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [profileName, setProfileName] = useState<string | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
+  const [modo, setModo] = useState<"login" | "registro">("login");
+  const [nombre, setNombre] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  // ── Dashboard ──
   const [ingestors, setIngestors] = useState<any[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showListModal, setShowListModal] = useState(false);
@@ -17,12 +34,144 @@ export default function Home() {
   const [deletingBatch, setDeletingBatch] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
+  // Verificar sesión al montar
   useEffect(() => {
-    fetch("/api/publish").then(r => r.json()).then(setIngestors).catch(() => {});
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setSessionLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+    return () => subscription.unsubscribe();
   }, []);
+
+  // Cargar company_id y nombre del perfil cuando hay sesión
+  useEffect(() => {
+    if (!session) { setCompanyId(null); setProfileName(null); return; }
+    supabase
+      .from("profiles")
+      .select("company_id, name")
+      .eq("user_id", session.user.id)
+      .single()
+      .then(({ data }) => {
+        setCompanyId(data?.company_id ?? null);
+        setProfileName(data?.name ?? null);
+      });
+  }, [session]);
+
+  // Cargar ingestores cuando hay sesión
+  useEffect(() => {
+    if (!session) { setIngestors([]); return; }
+    fetch("/api/publish").then(r => r.json()).then(setIngestors).catch(() => {});
+  }, [session]);
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthError(null);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) setAuthError(error.message);
+    setAuthLoading(false);
+  }
+
+  async function handleRegistro(e: React.FormEvent) {
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthError(null);
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, name: nombre }),
+    });
+    const data = await res.json();
+    if (!res.ok) { setAuthError(data.error); setAuthLoading(false); return; }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) setAuthError(error.message);
+    setAuthLoading(false);
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    setIngestors([]);
+    setSelectedId(null);
+  }
 
   const selectedIngestor = ingestors.find(i => i.id === selectedId);
 
+  // ── Cargando sesión ──
+  if (sessionLoading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh", color: "#666" }}>
+        Cargando…
+      </div>
+    );
+  }
+
+  // ── Sin sesión: formulario login/registro ──
+  if (!session) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "70vh" }}>
+        <div style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 10, padding: "2rem", width: "100%", maxWidth: 380 }}>
+          <h2 style={{ color: "#facc15", margin: "0 0 1.75rem", fontSize: 20 }}>🪲 Luciérnaga</h2>
+          <form onSubmit={modo === "login" ? handleLogin : handleRegistro}>
+            {modo === "registro" && (
+              <label style={{ display: "block", marginBottom: "1.1rem" }}>
+                <span style={{ fontSize: 13, color: "#aaa" }}>Nombre</span>
+                <input
+                  type="text"
+                  value={nombre}
+                  onChange={e => setNombre(e.target.value)}
+                  autoFocus
+                  style={{ width: "100%", padding: "0.5rem", borderRadius: 6, border: "1px solid #333", background: "#0d0d0d", color: "#f0f0f0", marginTop: 6, boxSizing: "border-box", fontSize: 14 }}
+                />
+              </label>
+            )}
+            <label style={{ display: "block", marginBottom: "1.1rem" }}>
+              <span style={{ fontSize: 13, color: "#aaa" }}>Email</span>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                autoFocus={modo === "login"}
+                style={{ width: "100%", padding: "0.5rem", borderRadius: 6, border: "1px solid #333", background: "#0d0d0d", color: "#f0f0f0", marginTop: 6, boxSizing: "border-box", fontSize: 14 }}
+              />
+            </label>
+            <label style={{ display: "block", marginBottom: "1.4rem" }}>
+              <span style={{ fontSize: 13, color: "#aaa" }}>Contraseña</span>
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                style={{ width: "100%", padding: "0.5rem", borderRadius: 6, border: "1px solid #333", background: "#0d0d0d", color: "#f0f0f0", marginTop: 6, boxSizing: "border-box", fontSize: 14 }}
+              />
+            </label>
+            {authError && (
+              <p style={{ color: "#f87171", fontSize: 13, margin: "0 0 1rem" }}>{authError}</p>
+            )}
+            <button
+              type="submit"
+              disabled={authLoading}
+              style={{ width: "100%", padding: "0.6rem", borderRadius: 6, border: "none", background: "#facc15", color: "#000", fontWeight: "bold", cursor: authLoading ? "not-allowed" : "pointer", fontSize: 14, opacity: authLoading ? 0.6 : 1 }}
+            >
+              {authLoading ? "Cargando…" : modo === "login" ? "Iniciar sesión" : "Registrarse"}
+            </button>
+          </form>
+          <p style={{ textAlign: "center", marginTop: "1.25rem", fontSize: 13, color: "#666" }}>
+            {modo === "login" ? "¿No tienes cuenta?" : "¿Ya tienes cuenta?"}{" "}
+            <button
+              onClick={() => { setModo(modo === "login" ? "registro" : "login"); setAuthError(null); setNombre(""); }}
+              style={{ background: "none", border: "none", color: "#facc15", cursor: "pointer", fontSize: 13, padding: 0 }}
+            >
+              {modo === "login" ? "Registrarse" : "Iniciar sesión"}
+            </button>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Dashboard (sesión activa) ──
   return (
     <div style={{ display: "flex", gap: "1.5rem", maxWidth: 1280, margin: "0 auto", alignItems: "flex-start" }}>
 
@@ -32,6 +181,13 @@ export default function Home() {
         {/* HEADER */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1.5rem", flexWrap: "wrap" }}>
           <h1 style={{ color: "#facc15", margin: 0, flex: "1 1 auto" }}>🪲 Luciérnaga</h1>
+          <span style={{ fontSize: "1rem", color: "#facc15" }}>{profileName ?? session.user.email!.split("@")[0]}</span>
+          <button
+            onClick={handleLogout}
+            style={{ padding: "0.45rem 0.85rem", borderRadius: 6, border: "1px solid #facc15", background: "transparent", color: "#facc15", cursor: "pointer", fontSize: "0.9rem" }}
+          >
+            Cerrar sesión
+          </button>
           <button
             onClick={() => setShowListModal(v => !v)}
             style={{ padding: "0.45rem 1rem", borderRadius: 6, border: "1px solid #facc15", background: "transparent", color: "#facc15", cursor: "pointer", fontWeight: 600, fontSize: 13 }}
@@ -87,8 +243,9 @@ export default function Home() {
       </aside>
 
       {/* ── MODAL: CREAR INGESTOR ── */}
-      {showCreateModal && (
+      {showCreateModal && companyId && (
         <IngestorModal
+          companyId={companyId}
           onClose={() => setShowCreateModal(false)}
           onSuccess={(data) => {
             setIngestors(prev => [data as any, ...prev]);
@@ -108,7 +265,6 @@ export default function Home() {
             style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 10, padding: "1.5rem", width: "100%", maxWidth: 560, maxHeight: "80vh", overflowY: "auto" }}
             onClick={e => e.stopPropagation()}
           >
-            {/* Header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
               <h2 style={{ margin: 0, color: "#facc15", fontSize: 18 }}>
                 Mis ingestiones
@@ -132,7 +288,6 @@ export default function Home() {
               </p>
             ) : (
               <>
-                {/* Subheader: seleccionar todos + botón eliminar seleccionados */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem", padding: "0 0.25rem" }}>
                   <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: "#aaa", fontSize: 13 }}>
                     <input

@@ -10,6 +10,7 @@ interface Ingestor {
   source_type?: string;
   estado?: string;
   status?: string;
+  company_id?: string;
 }
 
 export function IngestorStatus() {
