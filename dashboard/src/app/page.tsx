@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import type { Session } from "@supabase/supabase-js";
 import { createSupabaseBrowser } from "@/lib/supabase-browser";
 
@@ -10,10 +11,13 @@ import { ChatPanel } from "@/components/ChatPanel";
 const supabase = createSupabaseBrowser();
 
 export default function Home() {
+  const router = useRouter();
+
   // ── Auth ──
   const [session, setSession] = useState<Session | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [profileName, setProfileName] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [sessionLoading, setSessionLoading] = useState(true);
   const [modo, setModo] = useState<"login" | "registro">("login");
   const [nombre, setNombre] = useState("");
@@ -48,15 +52,16 @@ export default function Home() {
 
   // Cargar company_id y nombre del perfil cuando hay sesión
   useEffect(() => {
-    if (!session) { setCompanyId(null); setProfileName(null); return; }
+    if (!session) { setCompanyId(null); setProfileName(null); setIsAdmin(false); return; }
     supabase
       .from("profiles")
-      .select("company_id, name")
+      .select("company_id, name, is_admin")
       .eq("user_id", session.user.id)
       .single()
       .then(({ data }) => {
         setCompanyId(data?.company_id ?? null);
         setProfileName(data?.name ?? null);
+        setIsAdmin(data?.is_admin === true);
       });
   }, [session]);
 
@@ -190,6 +195,14 @@ export default function Home() {
           >
             Cerrar sesión
           </button>
+          {isAdmin && (
+            <button
+              onClick={() => router.push("/admin")}
+              style={{ padding: "0.45rem 0.85rem", borderRadius: 6, border: "1px solid #facc15", background: "transparent", color: "#facc15", cursor: "pointer", fontSize: "0.9rem" }}
+            >
+              Panel Admin
+            </button>
+          )}
           <button
             onClick={() => setShowListModal(v => !v)}
             style={{ padding: "0.45rem 1rem", borderRadius: 6, border: "1px solid #facc15", background: "transparent", color: "#facc15", cursor: "pointer", fontWeight: 600, fontSize: 13 }}
