@@ -8,6 +8,7 @@ type Props = {
   onClose: () => void;
   onSuccess: (data: Record<string, unknown>) => void;
   companyId: string;
+  accessToken: string;
 };
 
 const inputStyle: CSSProperties = {
@@ -22,7 +23,7 @@ const inputStyle: CSSProperties = {
   fontSize: 14,
 };
 
-export function IngestorModal({ onClose, onSuccess, companyId }: Props) {
+export function IngestorModal({ onClose, onSuccess, companyId, accessToken }: Props) {
   const [name, setName] = useState("");
   const [sourceType, setSourceType] = useState("json");
   const [file, setFile] = useState<File | null>(null);
@@ -67,7 +68,11 @@ export function IngestorModal({ onClose, onSuccess, companyId }: Props) {
       formData.append("name", name.trim());
       formData.append("source_type", sourceType);
       formData.append("file", file);
-      const res = await fetch("/api/publish", { method: "POST", body: formData, headers: { "x-company-id": companyId } });
+      const res = await fetch("/api/publish", {
+        method: "POST",
+        body: formData,
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Error desconocido");
       onSuccess(data);

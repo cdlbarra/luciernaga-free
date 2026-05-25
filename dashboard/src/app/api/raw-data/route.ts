@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { verificarSesion } from "@/lib/auth";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,10 +15,16 @@ function extractRowCount(data: unknown): number {
 }
 
 export async function GET(req: Request) {
+  const sesion = await verificarSesion(req);
+  if (!sesion) return Response.json({ error: "No autorizado" }, { status: 401 });
+
   const { searchParams } = new URL(req.url);
 
   if (searchParams.get("getOptions") === "true") {
-    const { data, error } = await supabase.from("raw_data").select("uploaded_by, company");
+    const { data, error } = await supabase
+      .from("raw_data")
+      .select("uploaded_by, company")
+      .eq("company_id", sesion.company_id);
     if (error) return Response.json({ error }, { status: 500 });
     const users = [...new Set((data ?? []).map(r => r.uploaded_by))].sort();
     const companies = [...new Set((data ?? []).map(r => r.company))].sort();
@@ -30,6 +37,7 @@ export async function GET(req: Request) {
   let query = supabase
     .from("raw_data")
     .select("id, ingestor_id, uploaded_by, company, data_type, uploaded_at, created_at, data")
+    .eq("company_id", sesion.company_id)
     .order("uploaded_at", { ascending: false });
 
   if (uploadedBy) query = query.eq("uploaded_by", uploadedBy);

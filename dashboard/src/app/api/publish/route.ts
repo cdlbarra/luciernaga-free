@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import * as XLSX from "xlsx";
 import { generarReportValidacion } from "@/lib/dataValidator";
+import { verificarSesion } from "@/lib/auth";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,6 +22,9 @@ async function parseFile(file: File, sourceType: string): Promise<Record<string,
 }
 
 export async function POST(req: Request) {
+  const sesion = await verificarSesion(req);
+  if (!sesion) return Response.json({ error: "No autorizado" }, { status: 401 });
+
   const contentType = req.headers.get("content-type") ?? "";
 
   let name: string;
@@ -57,7 +61,7 @@ export async function POST(req: Request) {
 
   const { data, error } = await supabase
     .from("ingestors")
-    .insert({ name, contract: contrato, status: "active", company_id: req.headers.get("x-company-id") ?? "" })
+    .insert({ name, contract: contrato, status: "active", company_id: sesion.company_id })
     .select()
     .single();
 
@@ -79,10 +83,10 @@ export async function POST(req: Request) {
       .from("raw_data")
       .insert({
         ingestor_id: data.id,
-        company_id: req.headers.get("x-company-id") ?? "",
+        company_id: sesion.company_id,
         data: fileData,
-        uploaded_by: req.headers.get("x-user-id") ?? "anonymous",
-        company: req.headers.get("x-company") ?? "default",
+        uploaded_by: sesion.user_id,
+        company: sesion.company_id,
         data_type: "raw",
         uploaded_at: new Date().toISOString(),
         validation_report: validationReport,
@@ -106,20 +110,31 @@ export async function POST(req: Request) {
   return Response.json(data);
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const sesion = await verificarSesion(req);
+  if (!sesion) return Response.json({ error: "No autorizado" }, { status: 401 });
+
   const { data } = await supabase
     .from("ingestors")
     .select("*")
+    .eq("company_id", sesion.company_id)
     .order("created_at", { ascending: false });
   return Response.json(data ?? []);
 }
 
 export async function DELETE(req: Request) {
+  const sesion = await verificarSesion(req);
+  if (!sesion) return Response.json({ error: "No autorizado" }, { status: 401 });
+
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
   if (!id) return Response.json({ error: "ID requerido" }, { status: 400 });
 
-  const { error } = await supabase.from("ingestors").delete().eq("id", id);
+  const { error } = await supabase
+    .from("ingestors")
+    .delete()
+    .eq("id", id)
+    .eq("company_id", sesion.company_id);
   if (error) return Response.json({ error }, { status: 500 });
 
   return new Response(null, { status: 204 });

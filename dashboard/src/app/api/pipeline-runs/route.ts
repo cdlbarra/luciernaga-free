@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { verificarSesion } from '@/lib/auth';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -7,6 +8,9 @@ const supabase = createClient(
 );
 
 export async function GET(req: NextRequest) {
+  const sesion = await verificarSesion(req);
+  if (!sesion) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
   const ingestor_id = req.nextUrl.searchParams.get('ingestor_id');
   if (!ingestor_id) {
     return NextResponse.json({ error: 'ingestor_id requerido' }, { status: 400 });

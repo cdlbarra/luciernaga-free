@@ -63,7 +63,9 @@ export default function Home() {
   // Cargar ingestores cuando hay sesión
   useEffect(() => {
     if (!session) { setIngestors([]); return; }
-    fetch("/api/publish").then(r => r.json()).then(setIngestors).catch(() => {});
+    fetch("/api/publish", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    }).then(r => r.json()).then(setIngestors).catch(() => {});
   }, [session]);
 
   async function handleLogin(e: React.FormEvent) {
@@ -246,6 +248,7 @@ export default function Home() {
       {showCreateModal && companyId && (
         <IngestorModal
           companyId={companyId}
+          accessToken={session.access_token}
           onClose={() => setShowCreateModal(false)}
           onSuccess={(data) => {
             setIngestors(prev => [data as any, ...prev]);
@@ -376,7 +379,7 @@ export default function Home() {
 
       {/* ── MODAL: DETALLE INGESTOR ── */}
       {detailId && (
-        <IngestorDetail id={detailId} onClose={() => setDetailId(null)} />
+        <IngestorDetail id={detailId} onClose={() => setDetailId(null)} accessToken={session.access_token} />
       )}
 
       {/* ── MODAL: CONFIRMAR ELIMINACIÓN ── */}
@@ -402,7 +405,10 @@ export default function Home() {
               </button>
               <button
                 onClick={async () => {
-                  const res = await fetch(`/api/publish?id=${confirmDelete.id}`, { method: "DELETE" });
+                  const res = await fetch(`/api/publish?id=${confirmDelete.id}`, {
+                    method: "DELETE",
+                    headers: { Authorization: `Bearer ${session!.access_token}` },
+                  });
                   if (res.ok) {
                     setIngestors(prev => prev.filter(i => i.id !== confirmDelete.id));
                     setCheckedIds(prev => { const next = new Set(prev); next.delete(confirmDelete.id); return next; });
@@ -451,7 +457,10 @@ export default function Home() {
                     const ids = Array.from(checkedIds);
                     const res = await fetch("/api/ingestors/batch", {
                       method: "DELETE",
-                      headers: { "Content-Type": "application/json" },
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${session!.access_token}`,
+                      },
                       body: JSON.stringify({ ids }),
                     });
                     if (res.ok) {

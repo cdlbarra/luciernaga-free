@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { verificarSesion } from "@/lib/auth";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,7 +31,10 @@ function extractSourceMeta(source: unknown): { columns: string[]; recordCount: n
   return { columns: keys, recordCount: keys.length > 0 ? 1 : 0, previewRows: [] };
 }
 
-export async function GET(_req: Request, context: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
+  const sesion = await verificarSesion(req);
+  if (!sesion) return Response.json({ error: "No autorizado" }, { status: 401 });
+
   const { id } = await context.params;
 
   const [{ data: ingestor, error }, { data: runs }, { data: rawRecords }] = await Promise.all([
@@ -76,9 +80,16 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
   });
 }
 
-export async function DELETE(_req: Request, context: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: Request, context: { params: Promise<{ id: string }> }) {
+  const sesion = await verificarSesion(req);
+  if (!sesion) return Response.json({ error: "No autorizado" }, { status: 401 });
+
   const { id } = await context.params;
-  const { error } = await supabase.from("ingestors").delete().eq("id", id);
+  const { error } = await supabase
+    .from("ingestors")
+    .delete()
+    .eq("id", id)
+    .eq("company_id", sesion.company_id);
   if (error) return Response.json({ error }, { status: 500 });
   return new Response(null, { status: 204 });
 }

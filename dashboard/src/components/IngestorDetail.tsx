@@ -24,6 +24,7 @@ type IngestorData = {
 type Props = {
   id: string;
   onClose: () => void;
+  accessToken: string;
 };
 
 const row: CSSProperties = {
@@ -37,13 +38,13 @@ const row: CSSProperties = {
 const label: CSSProperties = { color: "#aaa" };
 const value: CSSProperties = { color: "#f0f0f0", fontWeight: 500 };
 
-export function IngestorDetail({ id, onClose }: Props) {
+export function IngestorDetail({ id, onClose, accessToken }: Props) {
   const [data, setData] = useState<IngestorData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/ingestors/${id}`)
+    fetch(`/api/ingestors/${id}`, { headers: { Authorization: `Bearer ${accessToken}` } })
       .then(r => r.json())
       .then(d => {
         if (d.error) throw new Error(d.error);
