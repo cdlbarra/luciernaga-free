@@ -1,3 +1,4 @@
+import { verificarSesion } from "@/lib/auth";
 import { createClient } from "@supabase/supabase-js";
 import { extractRecords, transformRecord } from "@/lib/transformer";
 
@@ -7,6 +8,9 @@ const supabase = createClient(
 );
 
 export async function POST(req: Request) {
+  const sesion = await verificarSesion(req);
+  if (!sesion) return Response.json({ error: "No autorizado" }, { status: 401 });
+
   try {
     const { ingestor_id, raw_data_id } = await req.json();
     console.log("[transform] ingestor_id:", ingestor_id, "raw_data_id:", raw_data_id, "typeof raw_data_id:", typeof raw_data_id);

@@ -1,3 +1,4 @@
+import { verificarSesion } from "@/lib/auth";
 import { createClient } from "@supabase/supabase-js";
 import { generarReportValidacion } from "@/lib/dataValidator";
 
@@ -24,9 +25,12 @@ function solucionPara(campo: string, tipo?: string): string {
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  const sesion = await verificarSesion(req);
+  if (!sesion) return Response.json({ error: "No autorizado" }, { status: 401 });
+
   const { id } = await context.params;
   console.log("[suggest] ingestor_id recibido:", id);
 

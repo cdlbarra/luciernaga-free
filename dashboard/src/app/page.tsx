@@ -254,6 +254,7 @@ export default function Home() {
           onShowIngestors={() => setShowListModal(v => !v)}
           ingestors={ingestors}
           onSelectIngestor={setSelectedId}
+          accessToken={session.access_token}
         />
       </aside>
 

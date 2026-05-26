@@ -180,7 +180,7 @@ export function IngestorDetail({ id, onClose, accessToken }: Props) {
               <p style={{ color: "#aaa", fontSize: 13, margin: "0 0 0.75rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                 Datos Transformados
               </p>
-              <TransformedDataPanel ingestorId={data.id} />
+              <TransformedDataPanel ingestorId={data.id} accessToken={accessToken} />
             </section>
           </>
         )}

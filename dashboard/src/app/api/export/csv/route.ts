@@ -1,3 +1,4 @@
+import { verificarSesion } from "@/lib/auth";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -29,13 +30,17 @@ function toCSV(rows: Record<string, unknown>[]): string {
 }
 
 export async function POST(req: Request) {
+  const sesion = await verificarSesion(req);
+  if (!sesion) return Response.json({ error: "No autorizado" }, { status: 401 });
+
   const { ids } = (await req.json()) as { ids: string[] };
   if (!ids?.length) return Response.json({ error: "IDs requeridos" }, { status: 400 });
 
   const { data, error } = await supabase
     .from("raw_data")
     .select("data")
-    .in("id", ids);
+    .in("id", ids)
+    .eq("company_id", sesion.company_id);
 
   if (error) return Response.json({ error }, { status: 500 });
 

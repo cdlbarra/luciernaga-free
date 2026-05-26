@@ -1,3 +1,4 @@
+import { verificarSesion } from "@/lib/auth";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -31,6 +32,9 @@ function isExcelSerial(v: unknown): v is number {
 }
 
 export async function GET(req: Request) {
+  const sesion = await verificarSesion(req);
+  if (!sesion) return Response.json({ error: "No autorizado" }, { status: 401 });
+
   const { searchParams } = new URL(req.url);
   const ingestorId = searchParams.get("ingestor_id");
   const page = parseInt(searchParams.get("page") ?? "1", 10);

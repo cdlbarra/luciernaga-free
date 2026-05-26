@@ -12,6 +12,7 @@ interface Props {
   onShowIngestors?: () => void;
   ingestors?: Array<{ id: string; name: string }>;
   onSelectIngestor?: (id: string | null) => void;
+  accessToken: string;
 }
 
 const iconPorTipo: Record<string, string> = {
@@ -21,7 +22,7 @@ const iconPorTipo: Record<string, string> = {
   info: "ℹ️",
 };
 
-export function ChatPanel({ ingestorId, ingestorName, onShowIngestors, ingestors = [], onSelectIngestor }: Props) {
+export function ChatPanel({ ingestorId, ingestorName, onShowIngestors, ingestors = [], onSelectIngestor, accessToken }: Props) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [cargando, setCargando] = useState(false);
@@ -79,7 +80,9 @@ export function ChatPanel({ ingestorId, ingestorName, onShowIngestors, ingestors
 
   async function cargarSugerencias(id: string) {
     try {
-      const res = await fetch(`/api/suggest/${id}`);
+      const res = await fetch(`/api/suggest/${id}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
       if (!res.ok) return;
       const data = await res.json();
       const sugs: Sugerencia[] = data.sugerencias ?? [];
@@ -121,7 +124,10 @@ export function ChatPanel({ ingestorId, ingestorName, onShowIngestors, ingestors
     try {
       const res = await fetch(`/api/transform`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({ ingestor_id: ingestorId, raw_data_id: rawDataId }),
       });
       const data = await res.json();
@@ -165,7 +171,10 @@ export function ChatPanel({ ingestorId, ingestorName, onShowIngestors, ingestors
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({
           messages: newMessages.map(({ role, content }) => ({ role, content })),
           context: Object.keys(context).length ? context : undefined,

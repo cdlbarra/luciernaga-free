@@ -48,7 +48,7 @@ function buildNumericData(
   });
 }
 
-export function TransformedDataPanel({ ingestorId }: { ingestorId: string }) {
+export function TransformedDataPanel({ ingestorId, accessToken }: { ingestorId: string; accessToken: string }) {
   const [data, setData] = useState<TransformedDataResponse | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -57,7 +57,9 @@ export function TransformedDataPanel({ ingestorId }: { ingestorId: string }) {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch(`/api/transformed-data?ingestor_id=${ingestorId}&page=${page}`)
+    fetch(`/api/transformed-data?ingestor_id=${ingestorId}&page=${page}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
       .then(r => r.json())
       .then(d => {
         if (d.error) throw new Error(typeof d.error === "string" ? d.error : JSON.stringify(d.error));
@@ -65,7 +67,7 @@ export function TransformedDataPanel({ ingestorId }: { ingestorId: string }) {
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
-  }, [ingestorId, page]);
+  }, [ingestorId, page, accessToken]);
 
   if (loading) {
     return (

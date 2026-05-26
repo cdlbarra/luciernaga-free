@@ -1,3 +1,5 @@
+import { verificarSesion } from "@/lib/auth";
+
 type Sugerencia = { tipo: string; campo: string; problema: string; solucion: string };
 type Context = {
   ingestor_id?: string;
@@ -86,6 +88,9 @@ const LISTA_REGEX =
   /\b(ver|muestra|muéstrame|lista|dame|quiero\s+ver|cuáles\s+son|cuales\s+son)\b.{0,30}\b(ingest(ores?|iones?|as?)|cargas?|datos)\b|\b(mis\s+)?(ingest(ores?|iones?|as?)|cargas?)\b/i;
 
 export async function POST(req: Request) {
+  const sesion = await verificarSesion(req);
+  if (!sesion) return Response.json({ error: "No autorizado" }, { status: 401 });
+
   const { messages, context } = await req.json() as {
     messages: Array<{ role: string; content: string }>;
     context?: Context;
