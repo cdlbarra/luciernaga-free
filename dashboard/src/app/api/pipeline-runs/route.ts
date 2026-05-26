@@ -16,6 +16,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'ingestor_id requerido' }, { status: 400 });
   }
 
+  const { data: ingestor } = await supabase
+    .from('ingestors')
+    .select('id')
+    .eq('id', ingestor_id)
+    .eq('company_id', sesion.company_id)
+    .single();
+
+  if (!ingestor) {
+    return NextResponse.json({ error: 'No encontrado' }, { status: 404 });
+  }
+
   const { data, error } = await supabase
     .from('pipeline_runs')
     .select('id, status, created_at, rows_processed, error_message')

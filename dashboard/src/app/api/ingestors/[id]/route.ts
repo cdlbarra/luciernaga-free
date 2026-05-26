@@ -38,7 +38,7 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
   const { id } = await context.params;
 
   const [{ data: ingestor, error }, { data: runs }, { data: rawRecords }] = await Promise.all([
-    supabase.from("ingestors").select("*").eq("id", id).single(),
+    supabase.from("ingestors").select("*").eq("id", id).eq("company_id", sesion.company_id).single(),
     supabase
       .from("pipeline_runs")
       .select("*")
