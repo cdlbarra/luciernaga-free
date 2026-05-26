@@ -6,23 +6,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY!
 );
 
-// BUG 1: re-interpreta bytes UTF-8 mal leídos como Latin-1 (mojibake)
-function fixMojibake(s: string): string {
-  if (!/[\xC0-\xFF]/.test(s)) return s;
-  try {
-    return Buffer.from(s, "latin1").toString("utf8");
-  } catch {
-    return s;
-  }
-}
-
-function fixRowEncoding(row: Record<string, unknown>): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.entries(row).map(([k, v]) => [k, typeof v === "string" ? fixMojibake(v) : v])
-  );
-}
-
-// BUG 2: seriales de fecha Excel → ISO string
+// seriales de fecha Excel → ISO string
 function excelSerialToISO(serial: number): string {
   return new Date((serial - 25569) * 86400 * 1000).toISOString().split("T")[0];
 }
@@ -58,9 +42,7 @@ export async function GET(req: Request) {
   }
 
   const rawData = data[0].data;
-  // BUG 1: arreglar encoding en todas las filas
-  const allRows: Record<string, unknown>[] = (Array.isArray(rawData) ? rawData : [])
-    .map(fixRowEncoding);
+  const allRows: Record<string, unknown>[] = Array.isArray(rawData) ? rawData : [];
 
   const columns = allRows.length > 0 ? Object.keys(allRows[0]) : [];
 
@@ -81,9 +63,10 @@ export async function GET(req: Request) {
     } else if (dateStrCount / sample.length > 0.7) {
       columnTypes[col] = "date";
     } else if (numCount / sample.length > 0.7) {
-      // BUG 2: si la mayoría son seriales Excel, reclasificar como fecha
+      // si la mayoría son seriales Excel, reclasificar como fecha
       const serialCount = sample.filter(isExcelSerial).length;
       if (serialCount / sample.length > 0.7) {
+        // si la mayoría son seriales Excel, reclasificar como fecha
         columnTypes[col] = "date";
         excelDateCols.add(col);
       } else {
@@ -94,7 +77,7 @@ export async function GET(req: Request) {
     }
   }
 
-  // BUG 2: convertir seriales Excel a ISO strings en todas las filas
+  // convertir seriales Excel a ISO strings en todas las filas
   const excelDateColsArr = Array.from(excelDateCols);
   const processedRows = excelDateColsArr.length === 0
     ? allRows
