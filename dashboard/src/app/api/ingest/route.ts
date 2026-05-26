@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import * as XLSX from "xlsx";
 import { generarReportValidacion } from "@/lib/dataValidator";
 import { extractRecords, transformRecord } from "@/lib/transformer";
+import { verificarSesion } from "@/lib/auth";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,6 +31,7 @@ async function saveAndTransform(
   ingestorId: string,
   rows: Record<string, unknown>[],
   uploadedBy: string,
+  companyId: string,
 ) {
   const validationReport = generarReportValidacion(rows);
   const validationStatus = validationReport.resumen.tiene_errores
@@ -44,7 +46,8 @@ async function saveAndTransform(
       ingestor_id: ingestorId,
       data: rows,
       uploaded_by: uploadedBy,
-      company: "default",
+      company_id: companyId,
+      company: companyId,
       data_type: "raw",
       uploaded_at: new Date().toISOString(),
       validation_report: validationReport,
@@ -99,6 +102,9 @@ async function saveAndTransform(
 }
 
 export async function POST(req: Request) {
+  const sesion = await verificarSesion(req);
+  if (!sesion) return Response.json({ success: false, message: "No autorizado" }, { status: 401 });
+
   let ingestorId: string | null = null;
   try {
     const contentType = req.headers.get("content-type") ?? "";
@@ -116,11 +122,20 @@ export async function POST(req: Request) {
         return Response.json({ success: false, message: "file es requerido" }, { status: 400 });
       }
 
+      const { data: ingestorCheck } = await supabase
+        .from("ingestors")
+        .select("id")
+        .eq("id", ingestorId)
+        .eq("company_id", sesion.company_id)
+        .single();
+      if (!ingestorCheck) return Response.json({ success: false, message: "Ingestor no encontrado" }, { status: 404 });
+
       const { rows } = await parseFile(file);
       const result = await saveAndTransform(
         ingestorId,
         rows,
-        req.headers.get("x-user-id") ?? "anonymous",
+        sesion.user_id,
+        sesion.company_id,
       );
 
       if (result.error) {
@@ -132,9 +147,18 @@ export async function POST(req: Request) {
     // JSON path: { source: { data: [], source_type }, ingestor_id }
     const { source, ingestor_id } = await req.json();
     ingestorId = ingestor_id ?? null;
+
+    const { data: ingestorCheck } = await supabase
+      .from("ingestors")
+      .select("id")
+      .eq("id", ingestorId!)
+      .eq("company_id", sesion.company_id)
+      .single();
+    if (!ingestorCheck) return Response.json({ success: false, message: "Ingestor no encontrado" }, { status: 404 });
+
     const rows: Record<string, unknown>[] = Array.isArray(source?.data) ? source.data : [];
 
-    const result = await saveAndTransform(ingestorId!, rows, "android");
+    const result = await saveAndTransform(ingestorId!, rows, sesion.user_id, sesion.company_id);
 
     if (result.error) {
       return Response.json({ success: false, message: result.error }, { status: 500 });
