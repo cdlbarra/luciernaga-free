@@ -98,6 +98,14 @@ async function saveAndTransform(
     console.log('PIPELINE RUN OK: guardado correctamente');
   }
 
+  await supabase
+    .from("ingestors")
+    .update({
+      registros_procesados: transformed.length,
+      columnas_detectadas: transformed.length > 0 ? Object.keys(transformed[0]).length : 0,
+    })
+    .eq("id", ingestorId);
+
   return { rowsProcessed: transformed.length };
 }
 
