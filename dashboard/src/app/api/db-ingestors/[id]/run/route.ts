@@ -32,7 +32,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
 
   const { data: ing, error } = await supabase
     .from("db_ingestors")
-    .select("id, db_type, host, port, database, username, password_encrypted, query")
+    .select("id, db_type, host, port, database_name, db_user, db_password_encrypted, query")
     .eq("id", id)
     .eq("company_id", sesion.company_id)
     .single();
@@ -49,9 +49,9 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
           db_type: ing.db_type,
           host: ing.host,
           port: ing.port,
-          database: ing.database,
-          username: ing.username,
-          password: descifrarPassword(ing.password_encrypted),
+          database: ing.database_name,
+          username: ing.db_user,
+          password: descifrarPassword(ing.db_password_encrypted),
         },
         query: ing.query,
       }),
