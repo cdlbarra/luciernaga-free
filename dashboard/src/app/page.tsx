@@ -204,6 +204,12 @@ export default function Home() {
             </button>
           )}
           <button
+            onClick={() => router.push("/db-ingestors")}
+            style={{ padding: "0.45rem 0.85rem", borderRadius: 6, border: "1px solid #facc15", background: "transparent", color: "#facc15", cursor: "pointer", fontSize: "0.9rem" }}
+          >
+            Ingestores de BD
+          </button>
+          <button
             onClick={() => setShowListModal(v => !v)}
             style={{ padding: "0.45rem 1rem", borderRadius: 6, border: "1px solid #facc15", background: "transparent", color: "#facc15", cursor: "pointer", fontWeight: 600, fontSize: 13 }}
           >
